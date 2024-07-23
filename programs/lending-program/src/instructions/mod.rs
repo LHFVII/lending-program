@@ -1,2 +1,2 @@
-pub mod init_user;
-pub use init_user::*;
+pub mod initialize_user;
+pub use initialize_user::*;

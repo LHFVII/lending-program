@@ -1,9 +1,6 @@
 use anchor_lang::prelude::*;
 
 pub fn initializeUser(ctx: Context<InitializeUser>) -> Result<()>{
-    let user: &mut Account<UserAccount> = &mut ctx.accounts.user_account;
-    user.total_collateral = 0;
-    user.total_borrowed = 0;
     Ok(())
 }
 
