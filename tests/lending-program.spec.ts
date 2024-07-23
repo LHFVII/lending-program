@@ -7,7 +7,6 @@ import { expect } from 'chai';
 import * as anchor from "@coral-xyz/anchor";
  
 const IDL = require("../target/idl/lending_program.json");
-const Voting = require("../target/types/lending_program");
 
 describe("Create a system account", async () => {
     it("Bankrun should be able to deploy the program", async () => {
