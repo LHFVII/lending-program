@@ -1,14 +1,16 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Mint;
+use anchor_spl::token::TokenAccount;
 
-pub fn supply_collateral(
-    ctx: Context<SupplyCollateral>,
+pub fn deposit_collateral(
+    ctx: Context<DepositCollateral>,
     ) -> Result<()>{
         
     Ok(())
 }
 
 #[derive(Accounts)]
-pub struct SupplyCollateral<'info> {
+pub struct DepositCollateral<'info> {
     #[account(mut)]
     pub user_token_account: Account<'info,TokenAccount>,
     pub mint: Account<'info,Mint>,
