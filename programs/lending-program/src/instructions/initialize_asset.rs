@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{self, Mint, Token, TokenAccount, TokenProgram}
+    token::{Mint, Token, TokenAccount}
 };
 
 
@@ -32,7 +31,7 @@ pub struct InitializeAsset<'info> {
 
     pub mint: InterfaceAccount<'info,Mint>,
 
-    /*#[account(
+    #[account(
         init,
         payer = payer,
         seeds = [mint.key().as_ref()],
@@ -40,8 +39,8 @@ pub struct InitializeAsset<'info> {
         token::authority = asset_token_account,
         bump
     )]
-    pub asset_token_account: Account<'info, TokenAccount>,*/
-    pub token_program: Program<'info, TokenProgram>,
+    pub asset_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info,System>
 }
 
@@ -52,3 +51,7 @@ pub struct AssetConfig{
     pub liquidation_threshold: u64,
     pub apy:u64
 }
+
+
+// Currently single collateral
+// Multiple collaterals -> Pools
