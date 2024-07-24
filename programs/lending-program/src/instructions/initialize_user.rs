@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-pub fn initializeUser(ctx: Context<InitializeUser>) -> Result<()>{
+pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()>{
     Ok(())
 }
 
