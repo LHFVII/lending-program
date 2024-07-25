@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()>{
+    ctx.accounts.user_account.owner = ctx.accounts.payer.key();
     Ok(())
 }
 
@@ -18,7 +19,6 @@ pub struct InitializeUser<'info> {
     )]
     pub user_account: Account<'info,UserAccount>,
 
-    
     pub system_program: Program<'info,System>
 }
 

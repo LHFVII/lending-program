@@ -20,7 +20,6 @@ describe("Create a system account", async () => {
         const provider = new BankrunProvider(context);
         const transferAmount = 1_000_000_000; // Example amount, adjust as needed
         
-      
         const puppetProgram = new Program<LendingProgram>(IDL, provider);
 
         const transferTransaction = new anchor.web3.Transaction().add(
@@ -31,13 +30,17 @@ describe("Create a system account", async () => {
             })
         );
 
+        console.log(userOne.publicKey.toString())
         // Send and confirm the transfer transaction
-      await provider.sendAndConfirm(transferTransaction, [provider.wallet.payer]);
+        await provider.sendAndConfirm(transferTransaction, [provider.wallet.payer]);
         
         await puppetProgram.methods.initializeUser()
             .accounts({payer: userOne.publicKey})
             .signers([userOne])
             .rpc();
         
+        const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
+        const firstUser = await puppetProgram.account.userAccount.fetch(userAddress);
+        console.log(firstUser)
     });
 });
