@@ -17,9 +17,8 @@ pub struct InitializeUser<'info> {
         bump,
         space = 8 + UserAccount::INIT_SPACE,
     )]
-    pub user_account: Account<'info,UserAccount>,
-
-    pub system_program: Program<'info,System>
+    pub user_account: Account<'info, UserAccount>,
+    pub system_program: Program<'info, System>
 }
 
 #[account]

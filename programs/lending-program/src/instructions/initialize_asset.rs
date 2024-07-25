@@ -4,9 +4,6 @@ use anchor_spl::{
 };
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
-
-
-
 pub fn initialize_asset(
     ctx: Context<InitializeAsset>,
     max_ltv: u64,
@@ -26,11 +23,11 @@ pub struct InitializeAsset<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [payer.key().as_ref()],
+        seeds = [mint.key().as_ref(), payer.key().as_ref()],
         bump,
-        space = 8 + AssetConfig::INIT_SPACE,
+        space = 8 + AssetConfigAccount::INIT_SPACE,
     )]
-    pub asset_config: Account<'info,AssetConfig>,
+    pub asset_config: Account<'info,AssetConfigAccount>,
 
     pub mint: InterfaceAccount<'info,Mint>,
 
@@ -44,12 +41,12 @@ pub struct InitializeAsset<'info> {
     )]
     pub asset_token_account: InterfaceAccount<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info,System>
+    pub system_program: Program<'info, System>
 }
 
 #[account]
 #[derive(InitSpace)]
-pub struct AssetConfig{
+pub struct AssetConfigAccount{
     pub max_ltv: u64,
     pub liquidation_threshold: u64,
     pub apy:u64
