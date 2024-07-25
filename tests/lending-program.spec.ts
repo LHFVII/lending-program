@@ -5,23 +5,32 @@ import { Program } from "@coral-xyz/anchor";
 import { LendingProgram } from "../target/types/lending_program";
 import { expect } from 'chai';
 import * as anchor from "@coral-xyz/anchor";
+import { createMint } from './utils';
  
 const IDL = require("../target/idl/lending_program.json");
 
-const LAMPORTS_PER_SOL = 1000000000;            
+const transferAmount = 1_000_000_000;
 
 
 describe("Create a system account", async () => {
-    it("Bankrun should be able to deploy the program", async () => {
-        const programId = PublicKey.unique()
-        const userOne = Keypair.generate();
-        
-        const context = await startAnchor("",[{name:"lending_program", programId: programId}],[])
-        const provider = new BankrunProvider(context);
-        const transferAmount = 1_000_000_000; // Example amount, adjust as needed
-        
-        const puppetProgram = new Program<LendingProgram>(IDL, provider);
+    let userOne;
+    let puppetProgram;
+    let provider;
+    let banksClient;
+    let mintAuthority;
 
+
+    before(async () => {
+        const programId = PublicKey.unique()
+        userOne = Keypair.generate();
+        const context = await startAnchor("",[{name:"lending_program", programId: programId}],[])
+        provider = new BankrunProvider(context);
+        puppetProgram = new Program<LendingProgram>(IDL, provider);
+        banksClient = context.banksClient;
+        mintAuthority = anchor.web3.Keypair.generate();
+    });
+
+    it("Initialize user", async () => {
         const transferTransaction = new anchor.web3.Transaction().add(
             anchor.web3.SystemProgram.transfer({
             fromPubkey: puppetProgram.provider.publicKey,
@@ -29,11 +38,7 @@ describe("Create a system account", async () => {
             lamports: transferAmount,
             })
         );
-
-        console.log(userOne.publicKey.toString())
-        // Send and confirm the transfer transaction
         await provider.sendAndConfirm(transferTransaction, [provider.wallet.payer]);
-        
         await puppetProgram.methods.initializeUser()
             .accounts({payer: userOne.publicKey})
             .signers([userOne])
@@ -41,6 +46,17 @@ describe("Create a system account", async () => {
         
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         const firstUser = await puppetProgram.account.userAccount.fetch(userAddress);
-        console.log(firstUser)
+        
+    });
+
+
+    it("Initialize asset", async () => {
+        const mint = await createMint(banksClient, provider.wallet.payer, mintAuthority.publicKey, mintAuthority.publicKey, 9);
+        await puppetProgram.methods.initializeAsset(new anchor.BN(30000),new anchor.BN(10),new anchor.BN(5))
+            .accounts({payer: puppetProgram.provider.publicKey, mint: mint})
+            .rpc();
+        
+        const [assetAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
+        await puppetProgram.account.userAccount.fetch(assetAddress);
     });
 });

@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    token::{Mint, Token, TokenAccount}
+    token::{Token}
 };
+use anchor_spl::token_interface::{Mint, TokenAccount};
+
+
 
 
 pub fn initialize_asset(
@@ -9,9 +12,9 @@ pub fn initialize_asset(
     max_ltv: u64,
     liquidation_threshold: u64, 
     apy:u64) -> Result<()>{
-        /*ctx.accounts.asset_config.max_ltv = max_ltv;
+        ctx.accounts.asset_config.max_ltv = max_ltv;
         ctx.accounts.asset_config.liquidation_threshold = liquidation_threshold;
-        ctx.accounts.asset_config.apy = apy;*/
+        ctx.accounts.asset_config.apy = apy;
     Ok(())
 }
 
@@ -20,7 +23,7 @@ pub struct InitializeAsset<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /*#[account(
+    #[account(
         init,
         payer = payer,
         seeds = [payer.key().as_ref()],
@@ -39,8 +42,8 @@ pub struct InitializeAsset<'info> {
         token::authority = asset_token_account,
         bump
     )]
-    pub asset_token_account: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,*/
+    pub asset_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info,System>
 }
 
