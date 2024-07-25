@@ -49,7 +49,6 @@ describe("Create a system account", async () => {
         
     });
 
-
     it("Initialize asset", async () => {
         const mint = await createMint(banksClient, provider.wallet.payer, mintAuthority.publicKey, mintAuthority.publicKey, 9);
         await puppetProgram.methods.initializeAsset(new anchor.BN(30000),new anchor.BN(10),new anchor.BN(5))
@@ -57,6 +56,6 @@ describe("Create a system account", async () => {
             .rpc();
         
         const [assetConfigAddress] = PublicKey.findProgramAddressSync([mint.toBuffer(),provider.wallet.publicKey.toBuffer()], puppetProgram.programId);
-        const assetConfig = await puppetProgram.account.assetConfigAccount.fetch(assetConfigAddress);
+        await puppetProgram.account.assetConfigAccount.fetch(assetConfigAddress);
     });
 });
