@@ -6,6 +6,9 @@ pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()>{
 
 #[derive(Accounts)]
 pub struct InitializeUser<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    
     #[account(
         init,
         payer = payer,
@@ -15,8 +18,7 @@ pub struct InitializeUser<'info> {
     )]
     pub user_account: Account<'info,UserAccount>,
 
-    #[account(mut)]
-    pub payer: Signer<'info>,
+    
     pub system_program: Program<'info,System>
 }
 

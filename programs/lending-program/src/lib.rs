@@ -11,8 +11,8 @@ declare_id!("77B3AdNp6RRzsVMQSWAUVv28RXmA8YJVAfWkimRTwXi6");
 pub mod lending_program {
     use super::*;
 
-    pub fn initialize(ctx: Context<InitializeUser>) -> Result<()> {
-        Ok(())
+    pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()> {
+        instructions::initialize_user(ctx)
     }
 }
 
