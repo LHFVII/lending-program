@@ -16,7 +16,7 @@ pub struct InitializePool<'info>{
     pub mint: Account<'info, Mint>,
     
     #[account(
-        init_if_needed,
+        init,
         payer = payer,
         associated_token::mint = mint,
         associated_token::authority = payer,
