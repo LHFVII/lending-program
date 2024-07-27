@@ -4,6 +4,7 @@ use anchor_spl::{
     associated_token::{AssociatedToken}
 };
 use crate::instructions::initialize_user::UserAccount;
+use crate::instructions::initialize_pool::InitializePool;
 
 use crate::error::{LendingProgramError};
 
@@ -39,7 +40,7 @@ pub struct DepositCollateral<'info> {
     pub user_account: Account<'info, UserAccount>,
 
     #[account(
-        constraint = !deposit_mint.key().eq(&pool_token_account.mint.key()) @ LendingProgramError::InvalidPoolMint
+        constraint = !deposit_mint.key().eq(&pool.accounts.mint.key()) @ LendingProgramError::InvalidPoolMint
     )]
     pub deposit_mint: Account<'info, Mint>,
 
@@ -50,6 +51,9 @@ pub struct DepositCollateral<'info> {
         associated_token::authority = payer,
     )]
     pub user_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub pool: Account<'info, InitializePool>,
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,

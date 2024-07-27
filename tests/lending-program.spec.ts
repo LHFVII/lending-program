@@ -61,15 +61,14 @@ describe("Create a system account", async () => {
             .rpc();
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
-        const firstUser = await puppetProgram.account.userAccount.fetch(userAddress);
         const [associatedTokenAddress] = await PublicKey.findProgramAddressSync([
-            userAddress.toBuffer(),
+            provider.publicKey.toBuffer(),
             TOKEN_PROGRAM_ID.toBuffer(),
             mint.toBuffer(),
         ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID)
 
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, depositMint: mint, userAccount: userOne.publicKey, poolTokenAccount: associatedTokenAddress})
+            .accounts({payer: userOne.publicKey, depositMint: mint, userAccount: userAddress, poolTokenAccount: associatedTokenAddress})
             .signers([userOne])
             .rpc();
     });

@@ -9,6 +9,7 @@ pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()>{
 }
 
 #[derive(Accounts)]
+#[derive(Clone)]
 pub struct InitializePool<'info>{
     #[account(mut)]
     pub payer: Signer<'info>,
