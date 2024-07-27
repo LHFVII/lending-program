@@ -49,13 +49,15 @@ describe("Create a system account", async () => {
         
     });
 
-    it("Initialize asset", async () => {
+    it("Initialize pool", async () => {
         const mint = await createMint(banksClient, provider.wallet.payer, mintAuthority.publicKey, mintAuthority.publicKey, 9);
-        await puppetProgram.methods.initializeAsset(new anchor.BN(30000),new anchor.BN(10),new anchor.BN(5))
+        await puppetProgram.methods.initializePool()
             .accounts({payer: puppetProgram.provider.publicKey, mint: mint})
             .rpc();
+    });
+
+    it("Deposit collateral", async () => {
+        const mint = await createMint(banksClient, provider.wallet.payer, mintAuthority.publicKey, mintAuthority.publicKey, 9);
         
-        const [assetConfigAddress] = PublicKey.findProgramAddressSync([mint.toBuffer(),provider.wallet.publicKey.toBuffer()], puppetProgram.programId);
-        await puppetProgram.account.assetConfigAccount.fetch(assetConfigAddress);
     });
 });

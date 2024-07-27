@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-
+use anchor_spl::{
+    token::{ Mint, Token, TokenAccount},
+    associated_token::{AssociatedToken}
+};
 
 pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()>{
     Ok(())
@@ -7,7 +10,8 @@ pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()>{
 
 #[derive(Accounts)]
 pub struct InitializePool<'info>{
-    pub signer: Signer<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     
     pub mint: Account<'info, Mint>,
     
@@ -15,10 +19,10 @@ pub struct InitializePool<'info>{
         init_if_needed,
         payer = payer,
         associated_token::mint = mint,
-        associated_token::authority = pool,
+        associated_token::authority = payer,
     )]
-    pub pool_token_account: Account<'info, token::TokenAccount>,
-    pub token_program: Program<'info, token::Token>,
-    pub associated_token_program: Program<'info, associated_token::AssociatedToken>,
+    pub pool_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>
 }
