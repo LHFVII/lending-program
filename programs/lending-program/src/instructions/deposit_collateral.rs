@@ -15,6 +15,7 @@ pub fn deposit_collateral<'info>(
         let from = &mut ctx.accounts.user_token_account;
         let to = &mut ctx.accounts.pool_token_account;
         let token_program = &mut ctx.accounts.token_program;
+        msg!("what is going on?");
         transfer(
             CpiContext::new(
                 token_program.to_account_info(),
@@ -38,14 +39,14 @@ pub struct DepositCollateral<'info> {
     pub user_account: Account<'info, UserAccount>,
 
     #[account(
-        constraint = !pay_mint.key().eq(&pool_token_account.mint.key()) @ LendingProgramError::InvalidPoolMint
+        constraint = !deposit_mint.key().eq(&pool_token_account.mint.key()) @ LendingProgramError::InvalidPoolMint
     )]
-    pub pay_mint: Account<'info, Mint>,
+    pub deposit_mint: Account<'info, Mint>,
 
     #[account(
         init_if_needed,
         payer = payer,
-        associated_token::mint = pay_mint,
+        associated_token::mint = deposit_mint,
         associated_token::authority = payer,
     )]
     pub user_token_account: Account<'info, TokenAccount>,

@@ -22,6 +22,10 @@ pub mod lending_program {
     pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()> {
         instructions::initialize_pool(ctx)
     }
+
+    pub fn deposit_collateral(ctx: Context<DepositCollateral>, amount: u64) -> Result<()> {
+        instructions::deposit_collateral(ctx, amount)
+    }
 }
 
 
