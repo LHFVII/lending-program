@@ -71,12 +71,13 @@ describe("Create a system account", async () => {
             USDC,
             userOne.publicKey
             );
+            console.log('about to mint...')
         await mintTo(
             banksClient,
             userOne,
             USDC,
             userUsdcAccount,
-            userOne.publicKey,
+            payer,
             1_000_000 * 10 ** 6,
         );
           console.log('minted to user...')
