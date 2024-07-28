@@ -4,7 +4,7 @@ use anchor_spl::{
     associated_token::{AssociatedToken}
 };
 use crate::instructions::initialize_user::UserAccount;
-use crate::instructions::initialize_pool::InitializePool;
+use crate::instructions::initialize_pool::PoolConfig;
 
 use crate::error::{LendingProgramError};
 
@@ -16,7 +16,6 @@ pub fn deposit_collateral<'info>(
         let from = &mut ctx.accounts.user_token_account;
         let to = &mut ctx.accounts.pool_token_account;
         let token_program = &mut ctx.accounts.token_program;
-        msg!("what is going on?");
         transfer(
             CpiContext::new(
                 token_program.to_account_info(),
@@ -40,7 +39,7 @@ pub struct DepositCollateral<'info> {
     pub user_account: Account<'info, UserAccount>,
 
     #[account(
-        constraint = !deposit_mint.key().eq(&pool.accounts.mint.key()) @ LendingProgramError::InvalidPoolMint
+        
     )]
     pub deposit_mint: Account<'info, Mint>,
 
@@ -53,12 +52,11 @@ pub struct DepositCollateral<'info> {
     pub user_token_account: Account<'info, TokenAccount>,
 
     #[account(mut)]
-    pub pool: Account<'info, InitializePool>,
+    pub pool_config: Account<'info, PoolConfig>,
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info,System>
-
 }

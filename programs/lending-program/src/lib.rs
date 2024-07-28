@@ -19,8 +19,8 @@ pub mod lending_program {
         instructions::initialize_asset(ctx, max_ltv, liquidation_threshold, apy)
     }
 
-    pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()> {
-        instructions::initialize_pool(ctx)
+    pub fn initialize_pool(ctx: Context<InitializePool>, mint: Pubkey) -> Result<()> {
+        instructions::initialize_pool(ctx,mint)
     }
 
     pub fn deposit_collateral(ctx: Context<DepositCollateral>, amount: u64) -> Result<()> {
