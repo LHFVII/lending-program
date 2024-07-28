@@ -65,13 +65,14 @@ describe("Create a system account", async () => {
             payer.publicKey,
             6
           );
+          
         let userUsdcAccount = await createAssociatedTokenAccount(
             banksClient,
             userOne,
             USDC,
             userOne.publicKey
-            );
-            console.log('about to mint...')
+        );
+
         await mintTo(
             banksClient,
             userOne,
@@ -80,7 +81,7 @@ describe("Create a system account", async () => {
             payer,
             1_000_000 * 10 ** 6,
         );
-          console.log('minted to user...')
+          
         await puppetProgram.methods.initializePool(USDC)
             .accounts({payer: puppetProgram.provider.publicKey, mint: USDC})
             .rpc();
