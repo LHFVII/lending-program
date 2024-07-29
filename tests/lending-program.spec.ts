@@ -110,7 +110,6 @@ describe("Create a system account", async () => {
 
         let PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
         let unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
-        console.log(unpackedPoolAccount)
         expect(unpackedPoolAccount.amount).to.equal(BigInt(0));
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
