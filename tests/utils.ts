@@ -54,7 +54,6 @@ export async function createMint(
     programId = token.TOKEN_PROGRAM_ID
   ): Promise<BanksTransactionMeta> {
     const [authorityPublicKey, signers] = getSigners(authority, multiSigners);
-    console.log('gotten public keys')
     const tx = new Transaction().add(
       token.createMintToInstruction(
         mint,
