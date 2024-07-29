@@ -27,6 +27,9 @@ pub fn deposit_collateral<'info>(
             ),
             amount
         );
+        ctx.accounts.user_account.assets.push(ctx.accounts.user_vault_info.key());
+
+        
     Ok(())
 }
 
@@ -38,9 +41,7 @@ pub struct DepositCollateral<'info> {
     #[account(mut)]
     pub user_account: Account<'info, UserAccount>,
 
-    #[account(
-        
-    )]
+    #[account()]
     pub deposit_mint: Account<'info, Mint>,
 
     #[account(
@@ -51,12 +52,25 @@ pub struct DepositCollateral<'info> {
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
-    pub pool_config: Account<'info, PoolConfig>,
+    #[account(
+        init_if_needed,
+        payer = payer,
+        seeds = [user_token_account.key().as_ref(), deposit_mint.key().as_ref()],
+        bump,
+        space = 8 + UserAccount::INIT_SPACE + 15,
+    )]
+    pub user_vault_info: Account<'info, TokenAccount>,
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info,System>
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct UserAssets {
+    pub mint: Pubkey,
+    pub amount_deposited: u64
 }

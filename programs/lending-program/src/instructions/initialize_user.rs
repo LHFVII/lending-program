@@ -15,7 +15,7 @@ pub struct InitializeUser<'info> {
         payer = payer,
         seeds = [payer.key().as_ref()],
         bump,
-        space = 8 + UserAccount::INIT_SPACE,
+        space = 8 + UserAccount::INIT_SPACE + 16,
     )]
     pub user_account: Account<'info, UserAccount>,
     pub system_program: Program<'info, System>
@@ -25,6 +25,8 @@ pub struct InitializeUser<'info> {
 #[derive(InitSpace)]
 pub struct UserAccount{
     pub owner: Pubkey,
-    pub total_collateral: u64,
-    pub total_borrowed:u64
+    #[max_len(32)]
+    pub assets: Vec<Pubkey>
 }
+
+

@@ -107,8 +107,10 @@ describe("Create a system account", async () => {
             TOKEN_PROGRAM_ID.toBuffer(),
             USDC.toBuffer(),
         ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID)
+
         let PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
         let unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
+        console.log(unpackedPoolAccount)
         expect(unpackedPoolAccount.amount).to.equal(BigInt(0));
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
@@ -117,12 +119,13 @@ describe("Create a system account", async () => {
             .signers([userOne])
             .rpc();
         
+        // Check pool and user USDC balance
         PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
         unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedPoolAccount.amount).to.equal(BigInt(100));
         userTokenAccount = await banksClient.getAccount(userTokenAddress);
         unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
-        // Check pool and user USDC balance
+        
     });
 });
