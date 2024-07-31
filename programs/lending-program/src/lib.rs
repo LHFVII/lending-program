@@ -22,6 +22,10 @@ pub mod lending_program {
     pub fn deposit_collateral(ctx: Context<DepositCollateral>, amount: u64) -> Result<()> {
         instructions::deposit_collateral(ctx, amount)
     }
+
+    pub fn withdraw_collateral(ctx: Context<WithdrawCollateral>, amount: u64) -> Result<()> {
+        instructions::withdraw_collateral(ctx, amount)
+    }
 }
 
 

@@ -13,8 +13,9 @@ pub fn withdraw_collateral<'info>(
     ctx: Context<WithdrawCollateral>, 
     amount: u64,
     ) -> Result<()>{
-        let from = &mut ctx.accounts.user_token_account;
-        let to = &mut ctx.accounts.pool_token_account;
+        // check if the amount is less than the vault account
+        let from = &mut ctx.accounts.pool_token_account;
+        let to = &mut ctx.accounts.user_token_account;
         let token_program = &mut ctx.accounts.token_program;
         transfer(
             CpiContext::new(
