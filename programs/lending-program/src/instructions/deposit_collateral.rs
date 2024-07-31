@@ -57,7 +57,7 @@ pub struct DepositCollateral<'info> {
         payer = payer,
         seeds = [b"user_assets".as_ref(), user_token_account.key().as_ref()],
         bump,
-        space = 8 + UserAssets::INIT_SPACE,
+        space = 8 + UserAssets::INIT_SPACE + 15,
     )]
     pub user_vault_info: Account<'info, UserAssets>,
 

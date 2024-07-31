@@ -53,8 +53,6 @@ describe("Create a system account", async () => {
             .rpc();
         
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
-        const firstUser = await puppetProgram.account.userAccount.fetch(userAddress);
-        
     });
 
     it("Initialize pool and deposit collateral", async () => {
@@ -125,6 +123,10 @@ describe("Create a system account", async () => {
         userTokenAccount = await banksClient.getAccount(userTokenAddress);
         unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
-        
+
+        const [userAssetAddress] = PublicKey.findProgramAddressSync([Buffer.from("user_assets"), userTokenAddress.toBuffer()], puppetProgram.programId);
+        const userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
+        expect(userVault.amount.toString()).to.equal("100");
+        expect(userVault.mint.toString()).to.equal(USDC.toString());
     });
 });
