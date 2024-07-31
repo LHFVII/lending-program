@@ -125,8 +125,15 @@ describe("Create a system account", async () => {
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
 
         const [userAssetAddress] = PublicKey.findProgramAddressSync([Buffer.from("user_assets"), userTokenAddress.toBuffer()], puppetProgram.programId);
-        const userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
+        let userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
         expect(userVault.amount.toString()).to.equal("100");
         expect(userVault.mint.toString()).to.equal(USDC.toString());
+
+        await puppetProgram.methods.depositCollateral(new anchor.BN(55))
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress, poolConfig:poolConfigAddress})
+            .signers([userOne])
+            .rpc();
+        userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
+        expect(userVault.amount.toString()).to.equal("155");
     });
 });

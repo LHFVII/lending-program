@@ -4,7 +4,6 @@ use anchor_spl::{
     associated_token::{AssociatedToken}
 };
 use crate::instructions::initialize_user::UserAccount;
-use crate::instructions::initialize_pool::PoolConfig;
 
 use crate::error::{LendingProgramError};
 
@@ -57,7 +56,7 @@ pub struct DepositCollateral<'info> {
         payer = payer,
         seeds = [b"user_assets".as_ref(), user_token_account.key().as_ref()],
         bump,
-        space = 8 + UserAssets::INIT_SPACE + 15,
+        space = 8 + UserAssets::INIT_SPACE + 16,
     )]
     pub user_vault_info: Account<'info, UserAssets>,
 
