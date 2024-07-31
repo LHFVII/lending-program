@@ -25,7 +25,8 @@ describe("Create a system account", async () => {
     let banksClient;
     let mintAuthority;
     let payer;
-
+    let USDC;
+    let userUsdcAccount
 
     before(async () => {
         const programId = PublicKey.unique()
@@ -36,9 +37,6 @@ describe("Create a system account", async () => {
         banksClient = context.banksClient;
         mintAuthority = anchor.web3.Keypair.generate();
         payer = provider.wallet.payer;
-    });
-
-    it("Initialize user", async () => {
         const transferTransaction = new anchor.web3.Transaction().add(
             anchor.web3.SystemProgram.transfer({
             fromPubkey: puppetProgram.provider.publicKey,
@@ -47,30 +45,30 @@ describe("Create a system account", async () => {
             })
         );
         await provider.sendAndConfirm(transferTransaction, [provider.wallet.payer]);
-        await puppetProgram.methods.initializeUser()
-            .accounts({payer: userOne.publicKey})
-            .signers([userOne])
-            .rpc();
-        
-        const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
-    });
-
-    it("Initialize pool and deposit collateral", async () => {
-        const USDC = await createMint(
+        USDC = await createMint(
             banksClient,
             payer,
             payer.publicKey,
             payer.publicKey,
             6
           );
-          
-        let userUsdcAccount = await createAssociatedTokenAccount(
+        userUsdcAccount = await createAssociatedTokenAccount(
             banksClient,
             userOne,
             USDC,
             userOne.publicKey
         );
+    });
 
+    it("Initialize user", async () => {
+        
+        await puppetProgram.methods.initializeUser()
+            .accounts({payer: userOne.publicKey})
+            .signers([userOne])
+            .rpc();
+    });
+
+    it("Initialize pool and deposit collateral", async () => {
         let userTokenAddress = await getAssociatedTokenAddressSync(USDC, userOne.publicKey);
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
