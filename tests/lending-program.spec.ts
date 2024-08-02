@@ -26,8 +26,13 @@ describe("Create a system account", async () => {
     let mintAuthority;
     let payer;
     let USDC;
-    let userUsdcAccount
-    let userTokenAddress
+    let secondMint;
+    let userUsdcAccount;
+    let userTokenAddress;
+    let userSecondMintTokenAddress;
+
+    let poolUsdcAssociatedTokenAddress;
+    let poolSecondMintAssociatedTokenAddress;
 
     before(async () => {
         const programId = PublicKey.unique()
@@ -53,6 +58,13 @@ describe("Create a system account", async () => {
             payer.publicKey,
             6
           );
+        secondMint = await createMint(
+            banksClient,
+            payer,
+            payer.publicKey,
+            payer.publicKey,
+            9
+          );
         userUsdcAccount = await createAssociatedTokenAccount(
             banksClient,
             userOne,
@@ -73,12 +85,28 @@ describe("Create a system account", async () => {
             payer,
             1_000_000 * 10 ** 6,
         );
+        
 
-        await puppetProgram.methods.initializePool(USDC)
+        await puppetProgram.methods.initializePool()
             .accounts({payer: puppetProgram.provider.publicKey, mint: USDC})
             .rpc();
         
+        await puppetProgram.methods.initializePool()
+            .accounts({payer: puppetProgram.provider.publicKey, mint: secondMint})
+            .rpc();
+        
         userTokenAddress = await getAssociatedTokenAddressSync(USDC, userOne.publicKey);
+        userSecondMintTokenAddress = await getAssociatedTokenAddressSync(secondMint, userOne.publicKey);
+        [poolUsdcAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
+            provider.publicKey.toBuffer(),
+            TOKEN_PROGRAM_ID.toBuffer(),
+            USDC.toBuffer(),
+        ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID);
+        [poolSecondMintAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
+            provider.publicKey.toBuffer(),
+            TOKEN_PROGRAM_ID.toBuffer(),
+            USDC.toBuffer(),
+        ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID);
     });
 
     it("Initialize pool and deposit collateral", async () => {
@@ -88,25 +116,21 @@ describe("Create a system account", async () => {
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt(1_000_000 * 10 ** 6));
         // get pool token associated account
-        const [poolAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
-            provider.publicKey.toBuffer(),
-            TOKEN_PROGRAM_ID.toBuffer(),
-            USDC.toBuffer(),
-        ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID)
+        
 
-        let PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
-        let unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
+        let PoolTokenAccount = await banksClient.getAccount(poolUsdcAssociatedTokenAddress);
+        let unpackedPoolAccount = unpackAccount(poolUsdcAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedPoolAccount.amount).to.equal(BigInt(0));
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress})
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress})
             .signers([userOne])
             .rpc();
         
         // Check pool and user USDC balance
-        PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
-        unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
+        PoolTokenAccount = await banksClient.getAccount(poolUsdcAssociatedTokenAddress);
+        unpackedPoolAccount = unpackAccount(poolUsdcAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedPoolAccount.amount).to.equal(BigInt(100));
         userTokenAccount = await banksClient.getAccount(userTokenAddress);
         unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
@@ -118,11 +142,23 @@ describe("Create a system account", async () => {
         expect(userVault.mint.toString()).to.equal(USDC.toString());
 
         await puppetProgram.methods.depositCollateral(new anchor.BN(55))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress})
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress})
             .signers([userOne])
             .rpc();
         userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
         expect(userVault.amount.toString()).to.equal("155");
+    });
+
+    it("Borrow a new mint", async () => {
+        
+        const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
+        const [userAssetAddress] = PublicKey.findProgramAddressSync([Buffer.from("user_assets"), userTokenAddress.toBuffer()], puppetProgram.programId);
+        
+        await puppetProgram.methods.borrowAsset(new anchor.BN(30))
+            .accounts({payer: payer, borrowMint: secondMint, userAccount: userAddress, poolTokenAccount: poolSecondMintAssociatedTokenAddress, userVaultInfo: userAssetAddress})
+            .signers([payer])
+            .rpc();
+        
     });
 
     it("Withdraw", async () => {

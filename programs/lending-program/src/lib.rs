@@ -11,12 +11,16 @@ declare_id!("77B3AdNp6RRzsVMQSWAUVv28RXmA8YJVAfWkimRTwXi6");
 pub mod lending_program {
     use super::*;
 
+    pub fn borrow_asset(ctx: Context<BorrowAsset>, amount: u64) -> Result<()> {
+        instructions::borrow_asset(ctx, amount)
+    }
+
     pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()> {
         instructions::initialize_user(ctx)
     }
 
-    pub fn initialize_pool(ctx: Context<InitializePool>, mint: Pubkey) -> Result<()> {
-        instructions::initialize_pool(ctx,mint)
+    pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()> {
+        instructions::initialize_pool(ctx)
     }
 
     pub fn deposit_collateral(ctx: Context<DepositCollateral>, amount: u64) -> Result<()> {

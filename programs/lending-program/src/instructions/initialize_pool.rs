@@ -4,7 +4,7 @@ use anchor_spl::{
     associated_token::{AssociatedToken}
 };
 
-pub fn initialize_pool(ctx: Context<InitializePool>, mint: Pubkey) -> Result<()>{
+pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()>{
     Ok(())
 }
 
@@ -22,7 +22,6 @@ pub struct InitializePool<'info>{
         associated_token::authority = payer,
     )]
     pub pool_token_account: Account<'info, TokenAccount>,
-
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>
