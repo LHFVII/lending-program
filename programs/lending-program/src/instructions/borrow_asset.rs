@@ -5,15 +5,17 @@ use anchor_spl::{
 };
 use crate::instructions::initialize_user::UserAccount;
 use crate::instructions::deposit_collateral::UserAssets;
-
+use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
 use crate::error::{LendingProgramError};
+
 
 pub fn borrow_asset(
     ctx: Context<BorrowAsset>,
     amount: u64
     ) -> Result<()>{
-        msg!("{:?}",ctx.accounts.pool_token_account.mint);
-        msg!("{:?}",ctx.accounts.borrow_mint);
+        let feed_account = ctx.accounts.feed.data.borrow();
+        let feed = PullFeedAccountData::parse(feed_account).unwrap();
+        msg!("price: {:?}", feed.value());
         //require!(ctx.accounts.pool_token_account.mint.key() == ctx.accounts.borrow_mint.key(),LendingProgramError::MintMismatch);
         msg!("{:?}",amount);
 
@@ -42,6 +44,9 @@ pub struct BorrowAsset<'info> {
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub feed: AccountInfo<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
