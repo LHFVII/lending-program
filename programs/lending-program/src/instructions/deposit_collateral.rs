@@ -15,7 +15,7 @@ pub fn deposit_collateral<'info>(
         let from = &mut ctx.accounts.user_token_account;
         let to = &mut ctx.accounts.pool_token_account;
         let token_program = &mut ctx.accounts.token_program;
-        transfer(
+        let _ = transfer(
             CpiContext::new(
                 token_program.to_account_info(),
                 Transfer{
