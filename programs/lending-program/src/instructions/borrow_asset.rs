@@ -7,7 +7,6 @@ use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
 use rust_decimal::Decimal;
 use crate::error::LendingProgramError;
 use crate::instructions::initialize_user::UserAccount;
-use crate::instructions::deposit_collateral::UserAssets;
 
 
 pub fn borrow_asset(
@@ -24,9 +23,13 @@ pub fn borrow_asset(
         },
         }
         let amount_decimal = Decimal::new(amount as i64, 32);
+        let allowed_amount = Decimal::new(ctx.accounts.user_account.allowed_borrow_amount as i64,32);
         let total_amount = price * amount_decimal;
         let pool_amount = Decimal::new(ctx.accounts.pool_token_account.amount as i64, 32);
         require!(total_amount <= pool_amount,
+            LendingProgramError::NotEnoughFunds
+        );
+        require!(allowed_amount < total_amount,
             LendingProgramError::NotEnoughFunds
         );
 
@@ -54,9 +57,6 @@ pub fn borrow_asset(
 pub struct BorrowAsset<'info> {
     #[account(mut)]
     pub user_account: Account<'info, UserAccount>,
-
-    /// CHECK: We're using try_from to safely deserialize this account
-    pub user_asset_account: AccountInfo<'info>,
 
     #[account()]
     pub borrow_mint: Account<'info, Mint>,

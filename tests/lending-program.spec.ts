@@ -115,8 +115,6 @@ describe("Create a system account", async () => {
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt(1_000_000 * 10 ** 6));
-        // get pool token associated account
-        
 
         let PoolTokenAccount = await banksClient.getAccount(poolUsdcAssociatedTokenAddress);
         let unpackedPoolAccount = unpackAccount(poolUsdcAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
@@ -135,27 +133,14 @@ describe("Create a system account", async () => {
         userTokenAccount = await banksClient.getAccount(userTokenAddress);
         unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
-
-        const [userAssetAddress] = PublicKey.findProgramAddressSync([Buffer.from("user_assets"), userTokenAddress.toBuffer()], puppetProgram.programId);
-        let userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
-        expect(userVault.amount.toString()).to.equal("100");
-        expect(userVault.mint.toString()).to.equal(USDC.toString());
-
-        await puppetProgram.methods.depositCollateral(new anchor.BN(55))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress})
-            .signers([userOne])
-            .rpc();
-        userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
-        expect(userVault.amount.toString()).to.equal("155");
     });
 
     it("Borrow a new mint", async () => {
         
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
-        const [userAssetAddress] = PublicKey.findProgramAddressSync([Buffer.from("user_assets"), userTokenAddress.toBuffer()], puppetProgram.programId);
         
         await puppetProgram.methods.borrowAsset(new anchor.BN(30))
-            .accounts({payer: payer, borrowMint: secondMint, userAccount: userAddress, poolTokenAccount: poolSecondMintAssociatedTokenAddress, userVaultInfo: userAssetAddress})
+            .accounts({payer: payer, borrowMint: secondMint, userAccount: userAddress, poolTokenAccount: poolSecondMintAssociatedTokenAddress})
             .signers([payer])
             .rpc();
         
@@ -169,22 +154,20 @@ describe("Create a system account", async () => {
         ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID)
         let PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
         let unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
-        expect(unpackedPoolAccount.amount).to.equal(BigInt(155));
+        expect(unpackedPoolAccount.amount).to.equal(BigInt(100));
         
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
-        const [userAssetAddress] = PublicKey.findProgramAddressSync([Buffer.from("user_assets"), userTokenAddress.toBuffer()], puppetProgram.programId);
         
         await puppetProgram.methods.withdrawCollateral(new anchor.BN(30))
-            .accounts({payer: payer, collateralMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress, userTokenAccount: userTokenAddress, userVaultInfo: userAssetAddress})
+            .accounts({payer: payer, collateralMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress, userTokenAccount: userTokenAddress})
             .signers([payer])
             .rpc();
-        let userVault = await puppetProgram.account.userAssets.fetch(userAssetAddress);
-        expect(userVault.amount.toString()).to.equal("125");
-        PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
+        
+            PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
         unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
-        expect(unpackedPoolAccount.amount).to.equal(BigInt(125));
+        expect(unpackedPoolAccount.amount).to.equal(BigInt(70));
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
-        expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-125));
+        expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-70));
     });
 });

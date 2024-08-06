@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()>{
     ctx.accounts.user_account.owner = ctx.accounts.payer.key();
+    ctx.accounts.user_account.allowed_borrow_amount = 0;
     Ok(())
 }
 
@@ -25,8 +26,7 @@ pub struct InitializeUser<'info> {
 #[derive(InitSpace)]
 pub struct UserAccount{
     pub owner: Pubkey,
-    #[max_len(32)]
-    pub assets: Vec<Pubkey>
+    pub allowed_borrow_amount: u64
 }
 
 

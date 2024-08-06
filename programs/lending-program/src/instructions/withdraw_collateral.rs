@@ -4,7 +4,6 @@ use anchor_spl::{
     associated_token::{AssociatedToken}
 };
 use crate::instructions::initialize_user::UserAccount;
-use crate::instructions::deposit_collateral::UserAssets;
 
 use crate::error::{LendingProgramError};
 
@@ -29,7 +28,7 @@ pub fn withdraw_collateral<'info>(
             ),
             amount
         );    
-        ctx.accounts.user_vault_info.amount -= amount;
+        ctx.accounts.user_account.allowed_borrow_amount -= amount /10;
     Ok(())
 }
 
@@ -46,9 +45,6 @@ pub struct WithdrawCollateral<'info> {
 
     #[account(mut)]
     pub user_token_account: Account<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub user_vault_info: Account<'info, UserAssets>,
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,
