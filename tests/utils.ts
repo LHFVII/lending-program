@@ -1,5 +1,5 @@
 import { BanksClient, BanksTransactionMeta, ProgramTestContext } from 'solana-bankrun';
-import { SystemProgram, PublicKey, Keypair, Transaction } from "@solana/web3.js";
+import { SystemProgram, PublicKey, Keypair, Transaction, Signer } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import * as token from "@solana/spl-token";
 
@@ -41,8 +41,6 @@ export async function createMint(
     return keypair.publicKey;
   }
 
-  
-  
   export async function mintTo(
     banksClient: BanksClient,
     payer: anchor.web3.Signer,

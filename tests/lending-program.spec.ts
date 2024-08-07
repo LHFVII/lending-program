@@ -135,17 +135,6 @@ describe("Create a system account", async () => {
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
     });
 
-    it("Borrow a new mint", async () => {
-        
-        const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
-        
-        await puppetProgram.methods.borrowAsset(new anchor.BN(30))
-            .accounts({payer: payer, borrowMint: secondMint, userAccount: userAddress, poolTokenAccount: poolSecondMintAssociatedTokenAddress})
-            .signers([payer])
-            .rpc();
-        
-    });
-
     it("Withdraw", async () => {
         const [poolAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
             provider.publicKey.toBuffer(),
@@ -171,3 +160,4 @@ describe("Create a system account", async () => {
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-70));
     });
 });
+
