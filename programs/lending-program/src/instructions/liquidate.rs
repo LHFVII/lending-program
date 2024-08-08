@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount, transfer, Transfer};
 use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use crate::error::LendingProgramError;
 use crate::instructions::initialize_user::UserAccount;
 
@@ -10,13 +11,32 @@ pub fn liquidate(
     ) -> Result<()>{
         let feed_account = ctx.accounts.feed.data.borrow();
         let feed = PullFeedAccountData::parse(feed_account).unwrap();
-        let mut price;
+        let borrowed_amount = ctx.accounts.user_account.borrowed_amount_in_usdc;
+        let allowed_borrow_amount_in_usdc: Decimal;
+        let mut token_price_in_usdc;
+        let mut borrowed_amount_decimal: Decimal;
         match feed.value(){
             None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-            Some(feed_value) => {price = feed_value;}
+            Some(feed_value) => {token_price_in_usdc = feed_value;}
         };
-        let borrowed_amount = Decimal::new(ctx.accounts.user_account.borrowed_amount_in_usdc as i64,32);
-        let pool_amount = Decimal::new(ctx.accounts.pool_token_account.amount as i64, 32);
+        match feed.value(){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(feed_value) => {token_price_in_usdc = feed_value;}
+        };
+        match Decimal::from_u64(borrowed_amount){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {borrowed_amount_decimal = converted;}
+        };
+        match Decimal::from_u64(ctx.accounts.user_account.allowed_borrow_amount_in_usdc){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {allowed_borrow_amount_in_usdc = converted;}
+        };
+
+        
+        let borrowed_amount_in_usdc = borrowed_amount_decimal * token_price_in_usdc;
+        require!(borrowed_amount_in_usdc >= allowed_borrow_amount_in_usdc,
+            LendingProgramError::MarginNotLargeEnough
+        );
         
 
         let from = &mut ctx.accounts.pool_token_account;

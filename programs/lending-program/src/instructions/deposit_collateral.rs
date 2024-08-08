@@ -1,3 +1,5 @@
+use std::ops::Div;
+
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
@@ -26,7 +28,7 @@ pub fn deposit_collateral<'info>(
             ),
             amount
         );
-        ctx.accounts.user_account.allowed_borrow_amount = amount / 10;
+        ctx.accounts.user_account.allowed_borrow_amount_in_usdc = amount.div(10);
     Ok(())
 }
 

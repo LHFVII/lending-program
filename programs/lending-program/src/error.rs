@@ -12,6 +12,9 @@ pub enum LendingProgramError {
     #[msg("The amount you provide is less than what you own.")]
     NotEnoughFunds,
 
+    #[msg("The margin amount is not big enough.")]
+    MarginNotLargeEnough,
+
     #[msg("The mints have to match.")]
     MintMismatch,
 

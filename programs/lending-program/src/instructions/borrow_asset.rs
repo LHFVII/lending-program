@@ -5,6 +5,7 @@ use anchor_spl::{
 };
 use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use crate::error::LendingProgramError;
 use crate::instructions::initialize_user::UserAccount;
 
@@ -15,15 +16,30 @@ pub fn borrow_asset(
     ) -> Result<()>{
         let feed_account = ctx.accounts.feed.data.borrow();
         let feed = PullFeedAccountData::parse(feed_account).unwrap();
-        let mut price;
+        let token_price_in_usdc;
+        let mut requested_borrow_amount: Decimal;
+        let mut allowed_amount: Decimal;
+        let mut pool_amount: Decimal;
+        let borrowed_amount_in_usdc: u64 = ctx.accounts.user_account.allowed_borrow_amount_in_usdc;
+        
         match feed.value(){
             None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-            Some(feed_value) => {price = feed_value;}
+            Some(feed_value) => {token_price_in_usdc = feed_value;}
         };
-        let amount_decimal = Decimal::from_u64(amount);
-        let allowed_amount = Decimal::new(ctx.accounts.user_account.allowed_borrow_amount_in_usdc as i64,32);
-        let total_amount = price * amount_decimal;
-        let pool_amount = Decimal::new(ctx.accounts.pool_token_account.amount as i64, 32);
+        match Decimal::from_u64(amount){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {requested_borrow_amount = converted;}
+        };
+        match Decimal::from_u64(ctx.accounts.user_account.allowed_borrow_amount_in_usdc){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {allowed_amount = converted;}
+        };
+        match Decimal::from_u64(ctx.accounts.pool_token_account.amount){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {pool_amount = converted;}
+        };
+        
+        let total_amount = token_price_in_usdc * requested_borrow_amount;
         require!(total_amount <= pool_amount,
             LendingProgramError::NotEnoughFunds
         );
@@ -45,7 +61,8 @@ pub fn borrow_asset(
             ),
             amount
         );
-        ctx.accounts.user_account.borrowed_amount_in_usdc += total_amount.to_u64();
+        
+        ctx.accounts.user_account.borrowed_amount_in_usdc += borrowed_amount_in_usdc;
     Ok(())
 }
 
