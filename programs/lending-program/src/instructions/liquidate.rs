@@ -15,7 +15,7 @@ pub fn liquidate(
             None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
             Some(feed_value) => {price = feed_value;}
         };
-        let allowed_amount = Decimal::new(ctx.accounts.user_account.allowed_borrow_amount_in_usdc as i64,32);
+        let borrowed_amount = Decimal::new(ctx.accounts.user_account.borrowed_amount_in_usdc as i64,32);
         let pool_amount = Decimal::new(ctx.accounts.pool_token_account.amount as i64, 32);
         
 
@@ -32,10 +32,8 @@ pub fn liquidate(
                     authority: ctx.accounts.payer.to_account_info(),
                 },
             ),
-            amount
+            borrowed_amount
         );
-        msg!("{:?}",amount);
-        // add collateral check
     Ok(())
 }
 
