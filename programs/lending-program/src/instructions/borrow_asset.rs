@@ -61,7 +61,6 @@ pub fn borrow_asset(
             ),
             amount
         );
-        
         ctx.accounts.user_account.borrowed_amount_in_usdc += borrowed_amount_in_usdc;
     Ok(())
 }

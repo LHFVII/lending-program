@@ -29,6 +29,7 @@ pub fn deposit_collateral<'info>(
             amount
         );
         ctx.accounts.user_account.allowed_borrow_amount_in_usdc = amount.div(10);
+        ctx.accounts.user_deposit.amount += amount;
     Ok(())
 }
 
@@ -37,11 +38,20 @@ pub struct DepositCollateral<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    #[account()]
+    pub deposit_mint: Account<'info, Mint>,
+
     #[account(mut)]
     pub user_account: Account<'info, UserAccount>,
 
-    #[account()]
-    pub deposit_mint: Account<'info, Mint>,
+    #[account(
+        init,
+        payer = payer,
+        seeds = [user_account.owner.as_ref(), deposit_mint.key().as_ref()],
+        bump,
+        space = 8 + UserDepositAccount::INIT_SPACE,
+    )]
+    pub user_deposit: Account<'info, UserDepositAccount>,
 
     #[account(
         init_if_needed,
@@ -56,4 +66,10 @@ pub struct DepositCollateral<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info,System>
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct UserDepositAccount{
+    pub amount: u64,
 }
