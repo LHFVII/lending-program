@@ -1,13 +1,14 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount, transfer, Transfer};
-use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
-use rust_decimal::Decimal;
-use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
-use crate::error::LendingProgramError;
-use crate::instructions::initialize_user::UserAccount;
+use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
+use rust_decimal::{prelude::FromPrimitive, Decimal};
+use switchboard_on_demand::PullFeedAccountData;
 
-pub fn liquidate(
-    ctx: Context<LiquidateUser>
+use crate::error::LendingProgramError;
+
+use super::UserAccount;
+
+pub fn absorb_loan(
+    ctx: Context<AbsorbLoan>
     ) -> Result<()>{
         let feed_account = ctx.accounts.feed.data.borrow();
         let feed = PullFeedAccountData::parse(feed_account).unwrap();
@@ -58,7 +59,7 @@ pub fn liquidate(
 }
 
 #[derive(Accounts)]
-pub struct LiquidateUser<'info> {
+pub struct AbsorbLoan<'info> {
     #[account(mut)]
     pub user_account: Account<'info, UserAccount>,
 
