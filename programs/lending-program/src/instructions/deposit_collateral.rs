@@ -5,6 +5,8 @@ use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
+use rust_decimal::{prelude::FromPrimitive,prelude::ToPrimitive, Decimal};
+use switchboard_on_demand::PullFeedAccountData;
 use crate::instructions::initialize_user::UserAccount;
 
 use crate::error::{LendingProgramError};
@@ -14,6 +16,20 @@ pub fn deposit_collateral<'info>(
     ctx: Context<DepositCollateral>, 
     amount: u64,
     ) -> Result<()>{
+        let feed_account = ctx.accounts.feed.data.borrow();
+        let feed = PullFeedAccountData::parse(feed_account).unwrap();
+        let mut token_price_in_usdc;
+        let mut deposited_amount: Decimal;
+        match feed.value(){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(feed_value) => {token_price_in_usdc = feed_value;}
+        };
+        match Decimal::from_u64(amount){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {deposited_amount = converted;}
+        };
+        let deposited_amount_in_usdc = deposited_amount * token_price_in_usdc;
+        
         let from = &mut ctx.accounts.user_token_account;
         let to = &mut ctx.accounts.pool_token_account;
         let token_program = &mut ctx.accounts.token_program;
@@ -28,7 +44,12 @@ pub fn deposit_collateral<'info>(
             ),
             amount
         );
-        ctx.accounts.user_account.allowed_borrow_amount_in_usdc = amount.div(10);
+        let allowed_borrow_amount_in_usdc: u64;
+        match Decimal::to_u64(&deposited_amount_in_usdc){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {allowed_borrow_amount_in_usdc = converted;}
+        };
+        ctx.accounts.user_account.allowed_borrow_amount_in_usdc = allowed_borrow_amount_in_usdc.div(2);
         ctx.accounts.user_deposit.amount += amount;
     Ok(())
 }
@@ -45,7 +66,7 @@ pub struct DepositCollateral<'info> {
     pub user_account: Account<'info, UserAccount>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = payer,
         seeds = [user_account.owner.as_ref(), deposit_mint.key().as_ref()],
         bump,
@@ -60,6 +81,9 @@ pub struct DepositCollateral<'info> {
         associated_token::authority = payer,
     )]
     pub user_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub feed: AccountInfo<'info>,
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,

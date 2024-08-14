@@ -19,8 +19,8 @@ pub mod lending_program {
         instructions::initialize_user(ctx)
     }
 
-    pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()> {
-        instructions::initialize_pool(ctx)
+    pub fn initialize_pool(ctx: Context<InitializePool>, pool_number: u64) -> Result<()> {
+        instructions::initialize_pool(ctx, pool_number)
     }
 
     pub fn deposit_collateral(ctx: Context<DepositCollateral>, amount: u64) -> Result<()> {
