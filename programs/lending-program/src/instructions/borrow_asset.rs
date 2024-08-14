@@ -6,8 +6,8 @@ use anchor_spl::{
 use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
-use crate::error::LendingProgramError;
-use crate::instructions::initialize_user::UserAccount;
+use crate::{error::LendingProgramError, state::UserAccount};
+
 
 
 pub fn borrow_asset(

@@ -5,9 +5,9 @@ use anchor_spl::{
 };
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use switchboard_on_demand::PullFeedAccountData;
-use crate::instructions::initialize_user::UserAccount;
 
-use crate::error::{LendingProgramError};
+
+use crate::{error::LendingProgramError, state::UserAccount};
 
 
 pub fn withdraw_collateral<'info>(

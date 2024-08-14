@@ -7,7 +7,7 @@ use anchor_spl::{
 };
 use rust_decimal::{prelude::FromPrimitive,prelude::ToPrimitive, Decimal};
 use switchboard_on_demand::PullFeedAccountData;
-use crate::instructions::initialize_user::UserAccount;
+use crate::state::{UserAccount, UserDepositAccount};
 
 use crate::error::{LendingProgramError};
 
@@ -90,10 +90,4 @@ pub struct DepositCollateral<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info,System>
-}
-
-#[account]
-#[derive(InitSpace)]
-pub struct UserDepositAccount{
-    pub amount: u64,
 }

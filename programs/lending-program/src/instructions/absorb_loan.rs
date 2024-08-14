@@ -5,9 +5,7 @@ use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
 use rust_decimal::{prelude::{FromPrimitive, ToPrimitive}, Decimal};
 use switchboard_on_demand::PullFeedAccountData;
 
-use crate::error::LendingProgramError;
-
-use super::{UserAccount, UserDepositAccount};
+use crate::{error::LendingProgramError, state::{UserAccount, UserDepositAccount}};
 
 pub fn absorb_loan(
     ctx: Context<AbsorbLoan>
