@@ -50,7 +50,7 @@ pub fn deposit_collateral<'info>(
             Some(converted) => {allowed_borrow_amount_in_usdc = converted;}
         };
         ctx.accounts.user_account.allowed_borrow_amount_in_usdc = allowed_borrow_amount_in_usdc.div(2);
-        ctx.accounts.user_deposit.amount += amount;
+        ctx.accounts.user_deposit.amount += allowed_borrow_amount_in_usdc;
     Ok(())
 }
 

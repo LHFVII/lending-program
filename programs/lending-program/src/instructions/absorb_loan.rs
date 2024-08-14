@@ -2,7 +2,7 @@ use std::ops::Div;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
-use rust_decimal::{prelude::FromPrimitive, Decimal};
+use rust_decimal::{prelude::{FromPrimitive, ToPrimitive}, Decimal};
 use switchboard_on_demand::PullFeedAccountData;
 
 use crate::error::LendingProgramError;
@@ -35,7 +35,6 @@ pub fn absorb_loan(
             LendingProgramError::MarginNotLargeEnough
         );
 
-        // el loco te compra el prestamo con USDC
         let liquidator_sender_token_account = &mut ctx.accounts.liquidator_sender_token_account;
         let liquidator_receiver_token_account = &mut ctx.accounts.liquidator_receiver_token_account;
         let pool_sender_token_account = &mut ctx.accounts.pool_sender_token_account;
@@ -43,7 +42,7 @@ pub fn absorb_loan(
         
         let token_program = &mut ctx.accounts.token_program;
         let loan_amount = ctx.accounts.user_account.borrowed_amount_in_usdc;
-
+        // Buy the loan
         let _ = transfer(
             CpiContext::new(
                 token_program.to_account_info(),
@@ -57,9 +56,19 @@ pub fn absorb_loan(
         );
 
         // we also need 10% from the collateral as a gift to the liquidator
-        let liquidation_reward = borrowed_amount.div(10);
-        let liquidated_amount = ctx.accounts.user_deposit_account.amount - (borrowed_amount + liquidation_reward);
-        
+        let liquidation_reward = borrowed_amount.div(20);
+        let mut liquidation_reward_decimal;
+        match Decimal::from_u64(liquidation_reward){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {liquidation_reward_decimal = converted;}
+        };
+        let loan_token_amount_decimal = (borrowed_amount_in_usdc + liquidation_reward_decimal).div(token_price_in_usdc);
+        let mut loan_token_amount: u64;
+
+        match Decimal::to_u64(&loan_token_amount_decimal){
+            None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
+            Some(converted) => {loan_token_amount = converted;}
+        };
         // We give the collateral (i.e SOL)
         let _ = transfer(
             CpiContext::new(
@@ -70,13 +79,11 @@ pub fn absorb_loan(
                     authority: ctx.accounts.payer.to_account_info(),
                 },
             ),
-            liquidated_amount
+            loan_token_amount
         );
-
-
-        ctx.accounts.user_deposit_account.amount -= liquidated_amount;
-        ctx.accounts.user_account.allowed_borrow_amount_in_usdc  = 0;
-        // TO DO
+        ctx.accounts.user_deposit_account.amount -= loan_token_amount;
+        let new_deposit = ctx.accounts.user_deposit_account.amount;
+        ctx.accounts.user_account.allowed_borrow_amount_in_usdc  = new_deposit.div(2);
         
     Ok(())
 }
