@@ -4,7 +4,7 @@ pub mod error;
 
 use anchor_lang::prelude::*;
 
-use instructions::*;
+pub use instructions::*;
 
 declare_id!("77B3AdNp6RRzsVMQSWAUVv28RXmA8YJVAfWkimRTwXi6");
 
@@ -29,7 +29,7 @@ pub mod lending_program {
     }
 
     pub fn withdraw_collateral(ctx: Context<WithdrawCollateral>, amount: u64) -> Result<()> {
-        instructions::withdraw_collateral(ctx, amount)
+        ctx.accounts.withdraw_collateral(amount)
     }
 }
 
