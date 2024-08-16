@@ -3,8 +3,6 @@ use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
-use rust_decimal::{prelude::FromPrimitive, Decimal};
-use switchboard_on_demand::PullFeedAccountData;
 use crate::{error::LendingProgramError, state::UserAccount};
 
 #[derive(Accounts)]
@@ -36,7 +34,7 @@ impl<'info> WithdrawCollateral<'info> {
         &mut self, 
         amount: u64,
         ) -> Result<()>{
-            let mut requested_withdraw_amount: Decimal;
+            /*let mut requested_withdraw_amount: Decimal;
             let mut token_price_in_usdc: Decimal;
     
             let feed_account = self.feed.data.borrow();
@@ -67,7 +65,7 @@ impl<'info> WithdrawCollateral<'info> {
                 ),
                 amount
             );    
-            self.user_account.allowed_borrow_amount_in_usdc -= amount /10;
+            self.user_account.allowed_borrow_amount_in_usdc -= amount /10;*/
         Ok(())
     }
     
