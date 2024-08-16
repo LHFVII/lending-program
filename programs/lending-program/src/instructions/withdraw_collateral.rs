@@ -32,7 +32,6 @@ pub struct WithdrawCollateral<'info> {
 }
 
 impl<'info> WithdrawCollateral<'info> {
-    
     pub fn withdraw_collateral(
         &mut self, 
         amount: u64,

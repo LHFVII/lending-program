@@ -4,9 +4,7 @@ use anchor_spl::{
     associated_token::{AssociatedToken}
 };
 
-pub fn initialize_pool(ctx: Context<InitializePool>, pool_number: u64) -> Result<()>{
-    Ok(())
-}
+use crate::state::PoolConfig;
 
 #[derive(Accounts)]
 #[instruction(pool_number: u64)]
@@ -38,8 +36,8 @@ pub struct InitializePool<'info>{
     pub system_program: Program<'info, System>
 }
 
-#[account]
-#[derive(InitSpace)]
-pub struct PoolConfig{
-    pub max_amount: u64
+impl<'info> InitializePool<'info>{
+    pub fn initialize_pool(&mut self, pool_number: u64) -> Result<()>{
+        Ok(())
+    }
 }
