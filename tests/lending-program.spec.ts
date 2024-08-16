@@ -87,11 +87,11 @@ describe("Create a system account", async () => {
         );
         
 
-        await puppetProgram.methods.initializePool()
+        await puppetProgram.methods.initializePool(new anchor.BN(100))
             .accounts({payer: puppetProgram.provider.publicKey, mint: USDC})
             .rpc();
         
-        await puppetProgram.methods.initializePool()
+        await puppetProgram.methods.initializePool(new anchor.BN(100))
             .accounts({payer: puppetProgram.provider.publicKey, mint: secondMint})
             .rpc();
         
