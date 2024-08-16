@@ -1,17 +1,15 @@
-use std::ops::Div;
-
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
-use rust_decimal::{prelude::FromPrimitive,prelude::ToPrimitive, Decimal};
-use switchboard_on_demand::PullFeedAccountData;
+use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
 use crate::state::{UserAccount, UserDepositAccount};
 
 use crate::error::{LendingProgramError};
 
 #[derive(Accounts)]
+#[instruction()]
 pub struct DepositCollateral<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -39,8 +37,7 @@ pub struct DepositCollateral<'info> {
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    pub feed: AccountInfo<'info>,
+    pub price_update: Account<'info, PriceUpdateV2>,
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,
@@ -55,19 +52,17 @@ impl<'info> DepositCollateral<'info>{
         &mut self,
         amount: u64,
         ) -> Result<()>{
-            let feed_account = self.feed.data.borrow();
-            let feed = PullFeedAccountData::parse(feed_account).unwrap();
-            let mut token_price_in_usdc;
-            let mut deposited_amount: Decimal;
-            match feed.value(){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(feed_value) => {token_price_in_usdc = feed_value;}
-            };
-            match Decimal::from_u64(amount){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {deposited_amount = converted;}
-            };
-            let deposited_amount_in_usdc = deposited_amount * token_price_in_usdc;
+            
+            
+            let price_update = &mut self.price_update;
+            // get_price_no_older_than will fail if the price update is more than 30 seconds old
+            let maximum_age: u64 = 30;
+            // get_price_no_older_than will fail if the price update is for a different price feed.
+            // This string is the id of the BTC/USD feed. See https://pyth.network/developers/price-feed-ids for all available IDs.
+            let feed_id: [u8; 32] = get_feed_id_from_hex("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d")?;
+            let price = price_update.get_price_no_older_than(&Clock::get()?, maximum_age, &feed_id)?;
+            
+            let deposited_amount_in_usdc = amount as i64 * price.price;
             
             let from = &mut self.user_token_account;
             let to = &mut self.pool_token_account;
@@ -83,13 +78,9 @@ impl<'info> DepositCollateral<'info>{
                 ),
                 amount
             );
-            let allowed_borrow_amount_in_usdc: u64;
-            match Decimal::to_u64(&deposited_amount_in_usdc){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {allowed_borrow_amount_in_usdc = converted;}
-            };
-            self.user_account.allowed_borrow_amount_in_usdc = allowed_borrow_amount_in_usdc.div(2);
-            self.user_deposit.amount += allowed_borrow_amount_in_usdc;
+            msg!("{}",deposited_amount_in_usdc);
+            /*self.user_account.allowed_borrow_amount_in_usdc = allowed_borrow_amount_in_usdc.div(2);
+            self.user_deposit.amount += allowed_borrow_amount_in_usdc;*/
         Ok(())
     }
     
