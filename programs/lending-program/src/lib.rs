@@ -17,7 +17,7 @@ pub mod lending_program {
     }
 
     pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()> {
-        ctx.accounts.initialize_user(ctx)
+        ctx.accounts.initialize_user()
     }
 
     pub fn initialize_pool(ctx: Context<InitializePool>, pool_number: u64) -> Result<()> {
