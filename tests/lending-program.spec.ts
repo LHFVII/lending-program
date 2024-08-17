@@ -112,11 +112,7 @@ describe("Create a system account", async () => {
     it("Initialize pool and deposit collateral", async () => {
         // Check if the user has the correct amount of USDC
         const bankrunContextWrapper = new BankrunContextWrapper(context);
-        console.log('before oracle')
-        const oracle = await mockOracleNoProgram(bankrunContextWrapper, 1);
-        console.log('after oracle')
-        console.log(oracle)
-        
+        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper, 1);
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt(1_000_000 * 10 ** 6));
@@ -127,7 +123,7 @@ describe("Create a system account", async () => {
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceFeed: oracle})
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceFeed: priceFeedAddress})
             .signers([userOne])
             .rpc();
         

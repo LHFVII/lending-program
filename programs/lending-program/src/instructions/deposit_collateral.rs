@@ -1,9 +1,11 @@
+use std::ops::DerefMut;
+
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
-use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
+use pyth_solana_receiver_sdk::{price_update::{get_feed_id_from_hex, PriceUpdateV2}};
 use crate::state::{UserAccount, UserDepositAccount};
 
 use crate::error::{LendingProgramError};
@@ -11,6 +13,10 @@ use crate::error::{LendingProgramError};
 #[derive(Accounts)]
 #[instruction()]
 pub struct DepositCollateral<'info> {
+    #[account(mut)]
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub price_feed: UncheckedAccount<'info>,
+
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -38,10 +44,6 @@ pub struct DepositCollateral<'info> {
     pub user_token_account: Account<'info, TokenAccount>,
 
     #[account(mut)]
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    pub price_feed: AccountInfo<'info>,
-
-    #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -56,9 +58,9 @@ impl<'info> DepositCollateral<'info>{
         ) -> Result<()>{
             
             let maximum_age: u64 = 30;
-            let price_feed_account_data = &mut self.price_feed.try_borrow_data()?;
-            let price_feed_account =
-                PriceUpdateV2::try_deserialize(&mut &price_feed_account_data[..])?;
+            let price_feed_account_data: &[u8] = &mut self.price_feed.try_borrow_data().or(Err(LendingProgramError::InvalidPoolMint))?;
+            let inbetween: &mut &[u8] = &mut price_feed_account_data.clone();
+            let price_feed_account = pyth_solana_receiver_sdk::price_update::PriceUpdateV2::try_deserialize(inbetween)?;
             let feed_id: [u8; 32] = get_feed_id_from_hex("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d")?;
             let price = price_feed_account.get_price_no_older_than(&Clock::get()?, maximum_age, &feed_id)?;
             

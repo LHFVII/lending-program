@@ -99,9 +99,7 @@ export class BankrunContextWrapper {
         return blockhash.blockhash;
     }
 
-    printTxLogs(signature: string): void {
-        this.connection.printTxLogs(signature);
-    }
+    
 
     async moveTimeForward(increment: number): Promise<void> {
         const currentClock = await this.context.banksClient.getClock();
@@ -364,16 +362,6 @@ export class BankrunConnection {
             throw new Error('Transaction not found');
         }
         return txMeta.meta.computeUnitsConsumed;
-    }
-
-    printTxLogs(signature: string): void {
-        const txMeta = this.transactionToMeta.get(
-            signature as TransactionSignature
-        );
-        if (txMeta === undefined) {
-            throw new Error('Transaction not found');
-        }
-        console.log(txMeta.meta.logMessages);
     }
 
     async simulateTransaction(

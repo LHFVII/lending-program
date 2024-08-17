@@ -143,8 +143,6 @@ export async function createMint(
       provider
     );
 
-    console.log(program.programId.toString());
-  
     const priceFeedAddress = await createPriceFeedBankrun({
       oracleProgram: program,
       context: context,
@@ -152,8 +150,7 @@ export async function createMint(
       expo: expo,
       confidence,
     });
-    console.log('mockOracleNoProgram:', priceFeedAddress.toString());
-    
+  
     const feedData = await getFeedDataNoProgram(
       context.connection,
       priceFeedAddress
@@ -211,7 +208,6 @@ export async function createMint(
     connection: BankrunConnection,
     priceFeed: PublicKey
   ) => {
-    // @ts-ignore
     const info = await connection.getAccountInfoAndContext(priceFeed);
     return parsePriceData(info.value.data);
   };
@@ -391,9 +387,9 @@ const ERR_OUT_OF_RANGE = (str, range, received) =>
       )
     );
   }  
-
   const PKorNull = (data) =>
     data.equals(empty32Buffer) ? null : new anchor.web3.PublicKey(data);
+  
   export const createPriceFeed = async ({
     oracleProgram,
     initPrice,
@@ -419,10 +415,10 @@ const ERR_OUT_OF_RANGE = (str, range, received) =>
             // @ts-ignore
             fromPubkey: oracleProgram.provider.wallet.publicKey,
             newAccountPubkey: collateralTokenFeed.publicKey,
-            space: 3312,
+            space: 134,
             lamports:
               await oracleProgram.provider.connection.getMinimumBalanceForRentExemption(
-                3312
+                134
               ),
             programId: oracleProgram.programId,
           }),
@@ -456,4 +452,44 @@ const ERR_OUT_OF_RANGE = (str, range, received) =>
       corporateAction,
       publishSlot,
     };
+  };
+
+  export async function mockOracle(
+    price: number = 50 * 10e7,
+    expo = -7,
+    confidence?: number
+  ): Promise<PublicKey> {
+    // default: create a $50 coin oracle
+    const program = anchor.workspace.Pyth;
+  
+    anchor.setProvider(
+      anchor.AnchorProvider.local(undefined, {
+        commitment: 'confirmed',
+        preflightCommitment: 'confirmed',
+      })
+    );
+    const priceFeedAddress = await createPriceFeed({
+      oracleProgram: program,
+      initPrice: price,
+      expo: expo,
+      confidence,
+    });
+  
+    const feedData = await getFeedData(program, priceFeedAddress);
+    if (feedData.price !== price) {
+      console.log('mockOracle precision error:', feedData.price, '!=', price);
+    }
+    assert.ok(Math.abs(feedData.price - price) < 1e-10);
+  
+    return priceFeedAddress;
+  }
+  
+  export const getFeedData = async (
+    oracleProgram: Program,
+    priceFeed: PublicKey
+  ) => {
+    const info = await oracleProgram.provider.connection.getAccountInfo(
+      priceFeed
+    );
+    return parsePriceData(info.data);
   };
