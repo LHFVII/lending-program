@@ -2,9 +2,6 @@ use std::ops::Div;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
-use rust_decimal::{prelude::{FromPrimitive, ToPrimitive}, Decimal};
-use switchboard_on_demand::PullFeedAccountData;
-
 use crate::{error::LendingProgramError, state::{UserAccount, UserDepositAccount}};
 
 #[derive(Accounts)]
@@ -41,7 +38,7 @@ impl<'info> AbsorbLoan<'info> {
     pub fn absorb_loan(
         &mut self
         ) -> Result<()>{
-            let feed_account = self.feed.data.borrow();
+            /*let feed_account = self.feed.data.borrow();
             let feed = PullFeedAccountData::parse(feed_account).unwrap();
             let borrowed_amount = self.user_account.borrowed_amount_in_usdc;
             let allowed_borrow_amount_in_usdc: Decimal;
@@ -112,7 +109,7 @@ impl<'info> AbsorbLoan<'info> {
             );
             self.user_deposit_account.amount -= loan_token_amount;
             let new_deposit = self.user_deposit_account.amount;
-            self.user_account.allowed_borrow_amount_in_usdc  = new_deposit.div(2);
+            self.user_account.allowed_borrow_amount_in_usdc  = new_deposit.div(2);*/
             
         Ok(())
     }

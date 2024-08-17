@@ -3,9 +3,6 @@ use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer, Transfer},
     associated_token::AssociatedToken
 };
-use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
-use rust_decimal::Decimal;
-use rust_decimal::prelude::{FromPrimitive};
 use crate::{error::LendingProgramError, state::UserAccount};
 
 
@@ -43,7 +40,7 @@ impl<'info> BorrowAsset<'info> {
         &mut self,
         amount: u64
         ) -> Result<()>{
-            let feed_account = self.feed.data.borrow();
+            /*let feed_account = self.feed.data.borrow();
             let feed = PullFeedAccountData::parse(feed_account).unwrap();
             let token_price_in_usdc;
             let mut requested_borrow_amount: Decimal;
@@ -90,12 +87,9 @@ impl<'info> BorrowAsset<'info> {
                 ),
                 amount
             );
-            self.user_account.borrowed_amount_in_usdc += borrowed_amount_in_usdc;
+            self.user_account.borrowed_amount_in_usdc += borrowed_amount_in_usdc;*/
         Ok(())
     }
-    
-    
-
 }
 
 
