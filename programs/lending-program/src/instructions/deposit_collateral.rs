@@ -37,7 +37,9 @@ pub struct DepositCollateral<'info> {
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
-    pub price_update: Account<'info, PriceUpdateV2>,
+    #[account(mut)]
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub price_feed: AccountInfo<'info>,
 
     #[account(mut)]
     pub pool_token_account: Account<'info, TokenAccount>,
@@ -53,14 +55,12 @@ impl<'info> DepositCollateral<'info>{
         amount: u64,
         ) -> Result<()>{
             
-            
-            let price_update = &mut self.price_update;
-            // get_price_no_older_than will fail if the price update is more than 30 seconds old
             let maximum_age: u64 = 30;
-            // get_price_no_older_than will fail if the price update is for a different price feed.
-            // This string is the id of the BTC/USD feed. See https://pyth.network/developers/price-feed-ids for all available IDs.
+            let price_feed_account_data = &mut self.price_feed.try_borrow_data()?;
+            let price_feed_account =
+                PriceUpdateV2::try_deserialize(&mut &price_feed_account_data[..])?;
             let feed_id: [u8; 32] = get_feed_id_from_hex("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d")?;
-            let price = price_update.get_price_no_older_than(&Clock::get()?, maximum_age, &feed_id)?;
+            let price = price_feed_account.get_price_no_older_than(&Clock::get()?, maximum_age, &feed_id)?;
             
             let deposited_amount_in_usdc = amount as i64 * price.price;
             

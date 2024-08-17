@@ -127,7 +127,7 @@ describe("Create a system account", async () => {
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress})
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceFeed: oracle})
             .signers([userOne])
             .rpc();
         
