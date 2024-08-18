@@ -159,7 +159,7 @@ export async function createMint(
       console.log('mockOracle precision error:', feedData.price, '!=', price);
     }
     assert.ok(Math.abs(feedData.price - price) < 1e-10);
-  
+
     return priceFeedAddress;
   }
   
@@ -177,14 +177,14 @@ export async function createMint(
     expo?: number;
   }): Promise<PublicKey> => {
     const conf = confidence ? new anchor.BN(confidence) : new anchor.BN((initPrice / 10) * 10 ** -expo);
-  const collateralTokenFeed = new anchor.web3.Account();
-  const createAccountIx = anchor.web3.SystemProgram.createAccount({
-    fromPubkey: context.context.payer.publicKey,
-    newAccountPubkey: collateralTokenFeed.publicKey,
-    space: 3312,
-    lamports: LAMPORTS_PER_SOL / 20, // just hardcode based on mainnet
-    programId: oracleProgram.programId,
-  });
+    const collateralTokenFeed = new anchor.web3.Account();
+    const createAccountIx = anchor.web3.SystemProgram.createAccount({
+      fromPubkey: context.context.payer.publicKey,
+      newAccountPubkey: collateralTokenFeed.publicKey,
+      space: 3312,
+      lamports: LAMPORTS_PER_SOL / 20, // just hardcode based on mainnet
+      programId: oracleProgram.programId,
+    });
 
   const price = new anchor.BN(initPrice * 10 ** -expo);
 
@@ -227,9 +227,6 @@ export async function createMint(
     const exponent = data.readInt32LE(20);
     // Number of component prices.
     const numComponentPrices = data.readUInt32LE(24);
-    // unused
-    // const unused = accountInfo.data.readUInt32LE(28)
-    // Currently accumulating price slot.
     const currentSlot = readBigUInt64LE(data, 32);
     // Valid on-chain slot of aggregate price.
     const validSlot = readBigUInt64LE(data, 40);
@@ -239,19 +236,6 @@ export async function createMint(
     // Annualized price volatility.
     const avolComponent = readBigUInt64LE(data, 56);
     const avol = Number(avolComponent) * 10 ** exponent;
-    // Space for future derived values.
-    const drv0Component = readBigInt64LE(data, 64);
-    const drv0 = Number(drv0Component) * 10 ** exponent;
-    const drv1Component = readBigInt64LE(data, 72);
-    const drv1 = Number(drv1Component) * 10 ** exponent;
-    const drv2Component = readBigInt64LE(data, 80);
-    const drv2 = Number(drv2Component) * 10 ** exponent;
-    const drv3Component = readBigInt64LE(data, 88);
-    const drv3 = Number(drv3Component) * 10 ** exponent;
-    const drv4Component = readBigInt64LE(data, 96);
-    const drv4 = Number(drv4Component) * 10 ** exponent;
-    const drv5Component = readBigInt64LE(data, 104);
-    const drv5 = Number(drv5Component) * 10 ** exponent;
     // Product id / reference account.
     const productAccountKey = new anchor.web3.PublicKey(data.slice(112, 144));
     // Next price account in list.
@@ -297,18 +281,6 @@ export async function createMint(
           twap,
           avolComponent,
           avol,
-          drv0Component,
-          drv0,
-          drv1Component,
-          drv1,
-          drv2Component,
-          drv2,
-          drv3Component,
-          drv3,
-          drv4Component,
-          drv4,
-          drv5Component,
-          drv5,
           productAccountKey,
           nextPriceAccountKey,
           aggregatePriceUpdaterAccountKey,
@@ -425,7 +397,6 @@ const ERR_OUT_OF_RANGE = (str, range, received) =>
         ],
       }
     );
-    console.log(txid);
     return collateralTokenFeed.publicKey;
   };
 
@@ -493,3 +464,5 @@ const ERR_OUT_OF_RANGE = (str, range, received) =>
     );
     return parsePriceData(info.data);
   };
+
+  
