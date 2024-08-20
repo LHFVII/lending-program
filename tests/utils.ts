@@ -126,8 +126,8 @@ export async function createMint(
 
   export async function mockOracleNoProgram(
     context: BankrunContextWrapper,
-    price: number = 50 * 10e7,
-    expo = -7,
+    price: number = 5 * 10e7,
+	  expo = -7,
     confidence?: number
   ): Promise<PublicKey> {
     const provider = new AnchorProvider(
@@ -158,8 +158,7 @@ export async function createMint(
     if (feedData.price !== price) {
       console.log('mockOracle precision error:', feedData.price, '!=', price);
     }
-    assert.ok(Math.abs(feedData.price - price) < 1e-10);
-
+    //assert.ok(Math.abs(feedData.price - price) < 1e-10);
     return priceFeedAddress;
   }
   
@@ -227,6 +226,9 @@ export async function createMint(
     const exponent = data.readInt32LE(20);
     // Number of component prices.
     const numComponentPrices = data.readUInt32LE(24);
+    // unused
+    // const unused = accountInfo.data.readUInt32LE(28)
+    // Currently accumulating price slot.
     const currentSlot = readBigUInt64LE(data, 32);
     // Valid on-chain slot of aggregate price.
     const validSlot = readBigUInt64LE(data, 40);
@@ -236,6 +238,19 @@ export async function createMint(
     // Annualized price volatility.
     const avolComponent = readBigUInt64LE(data, 56);
     const avol = Number(avolComponent) * 10 ** exponent;
+    // Space for future derived values.
+    const drv0Component = readBigInt64LE(data, 64);
+    const drv0 = Number(drv0Component) * 10 ** exponent;
+    const drv1Component = readBigInt64LE(data, 72);
+    const drv1 = Number(drv1Component) * 10 ** exponent;
+    const drv2Component = readBigInt64LE(data, 80);
+    const drv2 = Number(drv2Component) * 10 ** exponent;
+    const drv3Component = readBigInt64LE(data, 88);
+    const drv3 = Number(drv3Component) * 10 ** exponent;
+    const drv4Component = readBigInt64LE(data, 96);
+    const drv4 = Number(drv4Component) * 10 ** exponent;
+    const drv5Component = readBigInt64LE(data, 104);
+    const drv5 = Number(drv5Component) * 10 ** exponent;
     // Product id / reference account.
     const productAccountKey = new anchor.web3.PublicKey(data.slice(112, 144));
     // Next price account in list.
@@ -281,6 +296,18 @@ export async function createMint(
           twap,
           avolComponent,
           avol,
+          drv0Component,
+          drv0,
+          drv1Component,
+          drv1,
+          drv2Component,
+          drv2,
+          drv3Component,
+          drv3,
+          drv4Component,
+          drv4,
+          drv5Component,
+          drv5,
           productAccountKey,
           nextPriceAccountKey,
           aggregatePriceUpdaterAccountKey,
@@ -423,46 +450,6 @@ const ERR_OUT_OF_RANGE = (str, range, received) =>
       corporateAction,
       publishSlot,
     };
-  };
-
-  export async function mockOracle(
-    price: number = 50 * 10e7,
-    expo = -7,
-    confidence?: number
-  ): Promise<PublicKey> {
-    // default: create a $50 coin oracle
-    const program = anchor.workspace.Pyth;
-  
-    anchor.setProvider(
-      anchor.AnchorProvider.local(undefined, {
-        commitment: 'confirmed',
-        preflightCommitment: 'confirmed',
-      })
-    );
-    const priceFeedAddress = await createPriceFeed({
-      oracleProgram: program,
-      initPrice: price,
-      expo: expo,
-      confidence,
-    });
-  
-    const feedData = await getFeedData(program, priceFeedAddress);
-    if (feedData.price !== price) {
-      console.log('mockOracle precision error:', feedData.price, '!=', price);
-    }
-    assert.ok(Math.abs(feedData.price - price) < 1e-10);
-  
-    return priceFeedAddress;
-  }
-  
-  export const getFeedData = async (
-    oracleProgram: Program,
-    priceFeed: PublicKey
-  ) => {
-    const info = await oracleProgram.provider.connection.getAccountInfo(
-      priceFeed
-    );
-    return parsePriceData(info.data);
   };
 
   

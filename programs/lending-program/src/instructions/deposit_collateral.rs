@@ -56,20 +56,21 @@ impl<'info> DepositCollateral<'info>{
         &mut self,
         amount: u64,
         ) -> Result<()>{
-            let price_feed_account_data: &[u8] = &mut self.price_feed.try_borrow_data()?;
-            //msg!("Full account data: {:?}", price_feed_account_data);
-            msg!("Account discriminator: {:?}", &price_feed_account_data[0..8]);
-            let inbetween: &mut &[u8] = &mut price_feed_account_data.clone();
             let oracle_price;
-            match PriceUpdateV2::try_deserialize(&mut &price_feed_account_data[..]) {
+            match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
                 Ok(account) => {
-                    oracle_price = account.price_message.price;
+                    let price_feed = account.get_price_unchecked();
+                    msg!("Raw price: {}", price_feed.price);
+                    msg!("Expo: {}", price_feed.expo);
+                    msg!("Conf: {}", price_feed.conf);
+                    oracle_price = price_feed.price;
                 },
                 Err(e) => {
                     msg!("Deserialization error: {:?}", e);
                     return Err(ProgramError::InvalidAccountData.into());
                 }
             }
+            msg!("Price is: {}", oracle_price);
             let deposited_amount_in_usdc = amount as i64 * oracle_price;
             
             let from = &mut self.user_token_account;

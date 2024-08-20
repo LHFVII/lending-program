@@ -112,7 +112,8 @@ describe("Create a system account", async () => {
     it("Initialize pool and deposit collateral", async () => {
         // Check if the user has the correct amount of USDC
         const bankrunContextWrapper = new BankrunContextWrapper(context);
-        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper, 1);
+        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper);
+        
     
         /*let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
