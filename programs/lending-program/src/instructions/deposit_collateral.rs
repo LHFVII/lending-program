@@ -1,9 +1,10 @@
+use std::ops::Div;
+
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
-use pyth_solana_receiver_sdk::{price_update::{PriceUpdateV2}};
 use pyth_sdk_solana::state::SolanaPriceAccount;
 
 use crate::state::{UserAccount, UserDepositAccount};
@@ -59,19 +60,18 @@ impl<'info> DepositCollateral<'info>{
             let oracle_price;
             match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
                 Ok(account) => {
-                    let price_feed = account.get_price_unchecked();
-                    msg!("Raw price: {}", price_feed.price);
-                    msg!("Expo: {}", price_feed.expo);
-                    msg!("Conf: {}", price_feed.conf);
-                    oracle_price = price_feed.price;
+                    let price_feed = account.get_ema_price_unchecked();
+                    let pricer: f64 = price_feed.price as f64;
+                    let base: f64 = 10.0;
+                    let comp: f64 = base.powi(price_feed.expo);
+                    oracle_price = (pricer * comp) as u64;
                 },
                 Err(e) => {
                     msg!("Deserialization error: {:?}", e);
                     return Err(ProgramError::InvalidAccountData.into());
                 }
             }
-            msg!("Price is: {}", oracle_price);
-            let deposited_amount_in_usdc = amount as i64 * oracle_price;
+            let deposited_amount_in_usdc = amount * oracle_price;
             
             let from = &mut self.user_token_account;
             let to = &mut self.pool_token_account;
@@ -87,9 +87,8 @@ impl<'info> DepositCollateral<'info>{
                 ),
                 amount
             );
-            msg!("{}",deposited_amount_in_usdc);
-            /*self.user_account.allowed_borrow_amount_in_usdc = allowed_borrow_amount_in_usdc.div(2);
-            self.user_deposit.amount += allowed_borrow_amount_in_usdc;*/
+            self.user_account.allowed_borrow_amount_in_usdc = deposited_amount_in_usdc.div(2);
+            self.user_deposit.amount += deposited_amount_in_usdc;
         Ok(())
     }
 }

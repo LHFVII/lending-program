@@ -112,18 +112,15 @@ describe("Create a system account", async () => {
     it("Initialize pool and deposit collateral", async () => {
         // Check if the user has the correct amount of USDC
         const bankrunContextWrapper = new BankrunContextWrapper(context);
-        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper);
-        
-    
-        /*let userTokenAccount = await banksClient.getAccount(userTokenAddress);
+        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper,150);
+            
+        let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt(1_000_000 * 10 ** 6));
 
         let PoolTokenAccount = await banksClient.getAccount(poolUsdcAssociatedTokenAddress);
         let unpackedPoolAccount = unpackAccount(poolUsdcAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
-        expect(unpackedPoolAccount.amount).to.equal(BigInt(0));*/
-
-        
+        expect(unpackedPoolAccount.amount).to.equal(BigInt(0));
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
@@ -132,15 +129,17 @@ describe("Create a system account", async () => {
             .rpc();
         
         // Check pool and user USDC balance
-        /*PoolTokenAccount = await banksClient.getAccount(poolUsdcAssociatedTokenAddress);
+        PoolTokenAccount = await banksClient.getAccount(poolUsdcAssociatedTokenAddress);
         unpackedPoolAccount = unpackAccount(poolUsdcAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedPoolAccount.amount).to.equal(BigInt(100));
         userTokenAccount = await banksClient.getAccount(userTokenAddress);
         unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
-        expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));*/
+        expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
     });
 
-    /*it("Withdraw", async () => {
+    it("Withdraw", async () => {
+        const bankrunContextWrapper = new BankrunContextWrapper(context);
+        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper,150);
         const [poolAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
             provider.publicKey.toBuffer(),
             TOKEN_PROGRAM_ID.toBuffer(),
@@ -153,7 +152,7 @@ describe("Create a system account", async () => {
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         
         await puppetProgram.methods.withdrawCollateral(new anchor.BN(30))
-            .accounts({payer: payer, collateralMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress, userTokenAccount: userTokenAddress})
+            .accounts({payer: payer, collateralMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress, userTokenAccount: userTokenAddress, priceFeed: priceFeedAddress})
             .signers([payer])
             .rpc();
         
@@ -163,7 +162,7 @@ describe("Create a system account", async () => {
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-70));
-    });*/
+    });
 });
 
 

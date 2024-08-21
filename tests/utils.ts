@@ -155,7 +155,7 @@ export async function createMint(
       context.connection,
       priceFeedAddress
     );
-    if (feedData.price !== price) {
+    if (Math.abs(feedData.price - price) > 1e-10) {
       console.log('mockOracle precision error:', feedData.price, '!=', price);
     }
     //assert.ok(Math.abs(feedData.price - price) < 1e-10);
@@ -186,7 +186,7 @@ export async function createMint(
     });
 
   const price = new anchor.BN(initPrice * 10 ** -expo);
-
+  
   // Use methods instead of instruction
   const ix = await oracleProgram.methods
     .initialize(price, expo, conf)
