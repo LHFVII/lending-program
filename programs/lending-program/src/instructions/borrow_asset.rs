@@ -3,7 +3,9 @@ use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer, Transfer},
     associated_token::AssociatedToken
 };
+use pyth_sdk_solana::state::SolanaPriceAccount;
 use crate::{error::LendingProgramError, state::UserAccount};
+
 
 
 #[derive(Accounts)]
@@ -26,7 +28,7 @@ pub struct BorrowAsset<'info> {
     pub pool_token_account: Account<'info, TokenAccount>,
 
     /// CHECK: This is not dangerous because we don't read or write from this account
-    pub feed: AccountInfo<'info>,
+    pub price_feed: AccountInfo<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -40,36 +42,27 @@ impl<'info> BorrowAsset<'info> {
         &mut self,
         amount: u64
         ) -> Result<()>{
-            /*let feed_account = self.feed.data.borrow();
-            let feed = PullFeedAccountData::parse(feed_account).unwrap();
-            let token_price_in_usdc;
-            let mut requested_borrow_amount: Decimal;
-            let mut allowed_amount: Decimal;
-            let mut pool_amount: Decimal;
-            let borrowed_amount_in_usdc: u64 = self.user_account.allowed_borrow_amount_in_usdc;
+            let oracle_price;
+            match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
+                Ok(account) => {
+                    let price_feed = account.get_ema_price_unchecked();
+                    let pricer: f64 = price_feed.price as f64;
+                    let base: f64 = 10.0;
+                    let comp: f64 = base.powi(price_feed.expo);
+                    oracle_price = (pricer * comp) as u64;
+                },
+                Err(e) => {
+                    msg!("Deserialization error: {:?}", e);
+                    return Err(ProgramError::InvalidAccountData.into());
+                }
+            }
+            let requested_borrow_amount_in_usdc = amount * oracle_price;
             
-            match feed.value(){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(feed_value) => {token_price_in_usdc = feed_value;}
-            };
-            match Decimal::from_u64(amount){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {requested_borrow_amount = converted;}
-            };
-            match Decimal::from_u64(self.user_account.allowed_borrow_amount_in_usdc){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {allowed_amount = converted;}
-            };
-            match Decimal::from_u64(self.pool_token_account.amount){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {pool_amount = converted;}
-            };
             
-            let total_amount = token_price_in_usdc * requested_borrow_amount;
-            require!(total_amount <= pool_amount,
+            require!(requested_borrow_amount_in_usdc <= self.pool_token_account.amount,
                 LendingProgramError::NotEnoughFunds
             );
-            require!(allowed_amount < total_amount,
+            require!(self.user_account.allowed_borrow_amount_in_usdc < requested_borrow_amount_in_usdc,
                 LendingProgramError::NotEnoughFunds
             );
             let from = &mut self.pool_token_account;
@@ -87,7 +80,7 @@ impl<'info> BorrowAsset<'info> {
                 ),
                 amount
             );
-            self.user_account.borrowed_amount_in_usdc += borrowed_amount_in_usdc;*/
+            self.user_account.borrowed_amount_in_usdc += requested_borrow_amount_in_usdc;
         Ok(())
     }
 }
