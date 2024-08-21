@@ -112,7 +112,8 @@ describe("Create a system account", async () => {
     it("Initialize pool and deposit collateral", async () => {
         // Check if the user has the correct amount of USDC
         const bankrunContextWrapper = new BankrunContextWrapper(context);
-        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper, 1);
+        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper,150);
+            
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt(1_000_000 * 10 ** 6));
@@ -136,7 +137,9 @@ describe("Create a system account", async () => {
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
     });
 
-    /*it("Withdraw", async () => {
+    it("Withdraw", async () => {
+        const bankrunContextWrapper = new BankrunContextWrapper(context);
+        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper,150);
         const [poolAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
             provider.publicKey.toBuffer(),
             TOKEN_PROGRAM_ID.toBuffer(),
@@ -149,7 +152,7 @@ describe("Create a system account", async () => {
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         
         await puppetProgram.methods.withdrawCollateral(new anchor.BN(30))
-            .accounts({payer: payer, collateralMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress, userTokenAccount: userTokenAddress})
+            .accounts({payer: payer, collateralMint: USDC, userAccount: userAddress, poolTokenAccount: poolAssociatedTokenAddress, userTokenAccount: userTokenAddress, priceFeed: priceFeedAddress})
             .signers([payer])
             .rpc();
         
@@ -159,7 +162,7 @@ describe("Create a system account", async () => {
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-70));
-    });*/
+    });
 });
 
 

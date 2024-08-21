@@ -1,11 +1,12 @@
-use std::ops::DerefMut;
+use std::ops::Div;
 
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
-use pyth_solana_receiver_sdk::{price_update::{get_feed_id_from_hex, PriceUpdateV2}};
+use pyth_sdk_solana::state::SolanaPriceAccount;
+
 use crate::state::{UserAccount, UserDepositAccount};
 
 use crate::error::{LendingProgramError};
@@ -13,9 +14,9 @@ use crate::error::{LendingProgramError};
 #[derive(Accounts)]
 #[instruction()]
 pub struct DepositCollateral<'info> {
-    #[account(mut)]
+    
     /// CHECK: This is not dangerous because we don't read or write from this account
-    pub price_feed: UncheckedAccount<'info>,
+    pub price_feed: AccountInfo<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -56,15 +57,21 @@ impl<'info> DepositCollateral<'info>{
         &mut self,
         amount: u64,
         ) -> Result<()>{
-            
-            let maximum_age: u64 = 30;
-            let price_feed_account_data: &[u8] = &mut self.price_feed.try_borrow_data().or(Err(LendingProgramError::InvalidPoolMint))?;
-            let inbetween: &mut &[u8] = &mut price_feed_account_data.clone();
-            let price_feed_account = pyth_solana_receiver_sdk::price_update::PriceUpdateV2::try_deserialize(inbetween)?;
-            let feed_id: [u8; 32] = get_feed_id_from_hex("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d")?;
-            let price = price_feed_account.get_price_no_older_than(&Clock::get()?, maximum_age, &feed_id)?;
-            
-            let deposited_amount_in_usdc = amount as i64 * price.price;
+            let oracle_price;
+            match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
+                Ok(account) => {
+                    let price_feed = account.get_ema_price_unchecked();
+                    let pricer: f64 = price_feed.price as f64;
+                    let base: f64 = 10.0;
+                    let comp: f64 = base.powi(price_feed.expo);
+                    oracle_price = (pricer * comp) as u64;
+                },
+                Err(e) => {
+                    msg!("Deserialization error: {:?}", e);
+                    return Err(ProgramError::InvalidAccountData.into());
+                }
+            }
+            let deposited_amount_in_usdc = amount * oracle_price;
             
             let from = &mut self.user_token_account;
             let to = &mut self.pool_token_account;
@@ -80,12 +87,8 @@ impl<'info> DepositCollateral<'info>{
                 ),
                 amount
             );
-            msg!("{}",deposited_amount_in_usdc);
-            /*self.user_account.allowed_borrow_amount_in_usdc = allowed_borrow_amount_in_usdc.div(2);
-            self.user_deposit.amount += allowed_borrow_amount_in_usdc;*/
+            self.user_account.allowed_borrow_amount_in_usdc = deposited_amount_in_usdc.div(2);
+            self.user_deposit.amount += deposited_amount_in_usdc;
         Ok(())
     }
-    
-    
-
 }
