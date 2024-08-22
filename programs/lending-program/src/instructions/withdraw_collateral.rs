@@ -5,8 +5,6 @@ use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
-use pyth_sdk_solana::state::SolanaPriceAccount;
-
 use crate::{error::LendingProgramError, state::{UserAccount, UserDepositAccount}};
 
 #[derive(Accounts)]
@@ -47,7 +45,7 @@ impl<'info> WithdrawCollateral<'info> {
         &mut self, 
         amount: u64,
         ) -> Result<()>{
-            let oracle_price;
+            /*let oracle_price;
             match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
                 Ok(account) => {
                     let price_feed = account.get_ema_price_unchecked();
@@ -80,7 +78,7 @@ impl<'info> WithdrawCollateral<'info> {
                 amount
             );    
             self.user_account.allowed_borrow_amount_in_usdc -= withdrawn_amount_in_usdc.div(2);
-            self.user_deposit.amount -= withdrawn_amount_in_usdc;
+            self.user_deposit.amount -= withdrawn_amount_in_usdc;*/
         Ok(())
     }
     

@@ -3,7 +3,7 @@ use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer, Transfer},
     associated_token::AssociatedToken
 };
-use pyth_sdk_solana::state::SolanaPriceAccount;
+
 use crate::{error::LendingProgramError, state::UserAccount};
 
 
@@ -42,7 +42,7 @@ impl<'info> BorrowAsset<'info> {
         &mut self,
         amount: u64
         ) -> Result<()>{
-            let oracle_price;
+            /*let oracle_price;
             match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
                 Ok(account) => {
                     let price_feed = account.get_ema_price_unchecked();
@@ -80,7 +80,7 @@ impl<'info> BorrowAsset<'info> {
                 ),
                 amount
             );
-            self.user_account.borrowed_amount_in_usdc += requested_borrow_amount_in_usdc;
+            self.user_account.borrowed_amount_in_usdc += requested_borrow_amount_in_usdc;*/
         Ok(())
     }
 }
