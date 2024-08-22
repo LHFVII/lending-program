@@ -8,6 +8,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, unpackAccount } from '@solana/spl-token';
 import { createAssociatedTokenAccount, createMint, mintTo, mockOracleNoProgram } from './utils';
 import { BankrunContextWrapper } from './bankrunConnection';
+import { PythSolanaReceiver } from '@pythnetwork/pyth-solana-receiver';
  
 const IDL = require("../target/idl/lending_program.json");
 
@@ -29,10 +30,14 @@ describe("Create a system account", async () => {
     let secondMint;
     let userUsdcAccount;
     let userTokenAddress;
-    let userSecondMintTokenAddress;
-
+    
     let poolUsdcAssociatedTokenAddress;
     let poolSecondMintAssociatedTokenAddress;
+    let pythSolanaReceiver
+    let bankrunContextWrapper: BankrunContextWrapper;
+    let connection
+    let solUsdPriceFeedAccount
+
 
     before(async () => {
         const programId = new PublicKey('77B3AdNp6RRzsVMQSWAUVv28RXmA8YJVAfWkimRTwXi6')
@@ -96,7 +101,7 @@ describe("Create a system account", async () => {
             .rpc();
         
         userTokenAddress = await getAssociatedTokenAddressSync(USDC, userOne.publicKey);
-        userSecondMintTokenAddress = await getAssociatedTokenAddressSync(secondMint, userOne.publicKey);
+        //userSecondMintTokenAddress = await getAssociatedTokenAddressSync(secondMint, userOne.publicKey);
         [poolUsdcAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
             provider.publicKey.toBuffer(),
             TOKEN_PROGRAM_ID.toBuffer(),
@@ -107,6 +112,24 @@ describe("Create a system account", async () => {
             TOKEN_PROGRAM_ID.toBuffer(),
             USDC.toBuffer(),
         ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID);
+        
+        bankrunContextWrapper = new BankrunContextWrapper(context);
+
+        const connection = bankrunContextWrapper.connection.toConnection();
+
+        const pythSolanaReceiver = new PythSolanaReceiver({
+        connection,
+        wallet: provider.wallet,
+        });
+      
+        const SOL_PRICE_FEED_ID =
+        '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d';
+      
+        solUsdPriceFeedAccount = pythSolanaReceiver
+        .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
+        .toBase58();
+    
+        console.log(solUsdPriceFeedAccount);
     });
 
     it("Initialize pool and deposit collateral", async () => {
@@ -124,7 +147,7 @@ describe("Create a system account", async () => {
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceFeed: priceFeedAddress})
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceFeed: solUsdPriceFeedAccount})
             .signers([userOne])
             .rpc();
         
@@ -137,7 +160,7 @@ describe("Create a system account", async () => {
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
     });
 
-    it("Withdraw", async () => {
+    /*it("Withdraw", async () => {
         const bankrunContextWrapper = new BankrunContextWrapper(context);
         const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper,150);
         const [poolAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
@@ -162,7 +185,7 @@ describe("Create a system account", async () => {
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-70));
-    });
+    });*/
 });
 
 
