@@ -49,6 +49,7 @@ impl<'info> BorrowAsset<'info> {
         &mut self,
         amount: u64
         ) -> Result<()>{
+            msg!("Borrowing...");
             let pool = &mut self.pool;
             let user = &mut self.user_account;
         
@@ -60,7 +61,7 @@ impl<'info> BorrowAsset<'info> {
             let sol_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &sol_feed_id)?;
             let usdc_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &usdc_feed_id)?;
         
-            // Note: For simplicity, interest is not being included in these calculations. 
+            msg!("Price is: {:?}",sol_price);
         
             let total_collateral = (sol_price.price as u64 * user.deposited_sol) + (usdc_price.price as u64 * user.deposited_usdc);
             let total_borrowed = (sol_price.price as u64 * user.borrowed_sol) + (usdc_price.price as u64 * user.borrowed_usdc);    

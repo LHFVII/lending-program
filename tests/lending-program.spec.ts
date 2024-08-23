@@ -6,7 +6,7 @@ import { LendingProgram } from "../target/types/lending_program";
 import { expect } from 'chai';
 import * as anchor from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, unpackAccount } from '@solana/spl-token';
-import { createAssociatedTokenAccount, createMint, mintTo, mockOracleNoProgram } from './utils';
+import { createAssociatedTokenAccount, createMint, mintTo } from './utils';
 import { BankrunContextWrapper } from './bankrunConnection';
 import { PythSolanaReceiver } from '@pythnetwork/pyth-solana-receiver';
  
@@ -32,7 +32,7 @@ describe("Create a system account", async () => {
     let userTokenAddress;
     
     let poolUsdcAssociatedTokenAddress;
-    let poolSecondMintAssociatedTokenAddress;
+    let poolSOLAssociatedTokenAddress;
     let pythSolanaReceiver
     let bankrunContextWrapper: BankrunContextWrapper;
     let connection
@@ -57,6 +57,7 @@ describe("Create a system account", async () => {
         solUsdPriceFeedAccount = pythSolanaReceiver
         .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
         .toBase58();
+
         puppetProgram = new Program<LendingProgram>(IDL, provider);
         banksClient = context.banksClient;
         mintAuthority = anchor.web3.Keypair.generate();
@@ -119,9 +120,9 @@ describe("Create a system account", async () => {
             USDC.toBuffer(),
         ],puppetProgram.programId);
 
-        [poolSecondMintAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
+        [poolSOLAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
             Buffer.from('treasury'),
-            USDC.toBuffer(),
+            SOL.toBuffer(),
         ],puppetProgram.programId);
     });
 
@@ -169,13 +170,34 @@ describe("Create a system account", async () => {
             .signers([payer])
             .rpc();
         
-            PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
+        PoolTokenAccount = await banksClient.getAccount(poolAssociatedTokenAddress);
         unpackedPoolAccount = unpackAccount(poolAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedPoolAccount.amount).to.equal(BigInt(70));
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-70));
     });*/
+
+    it("Borrow asset", async () => {
+        const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
+        const [userConfigAddress] = await PublicKey.findProgramAddressSync([
+            SOL.toBuffer(),
+        ],puppetProgram.programId);
+        const [poolSolConfigAddress] = await PublicKey.findProgramAddressSync([
+            SOL.toBuffer(),
+        ],puppetProgram.programId);
+        
+        await puppetProgram.methods.borrowAsset(new anchor.BN(30))
+            .accounts(
+                {payer: userOne.publicKey, mint: SOL, pool: poolSolConfigAddress, 
+                    userAccount: userAddress, 
+                    poolTokenAccount: poolSOLAssociatedTokenAddress, 
+                    priceUpdate: solUsdPriceFeedAccount, 
+                    tokenProgram: TOKEN_PROGRAM_ID })
+            .signers([userOne])
+            .rpc();
+        
+    });
 });
 
 
