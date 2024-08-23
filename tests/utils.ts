@@ -5,13 +5,11 @@ import * as token from "@solana/spl-token";
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import { assert } from 'chai';
 import buffer from 'buffer';
-
-
 import {
   BankrunConnection,
   BankrunContextWrapper,
 } from './bankrunConnection';
-import pythIDL from '../target/idl/pyth.json';
+
 
 const empty32Buffer = buffer.Buffer.alloc(32);
 
