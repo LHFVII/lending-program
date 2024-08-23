@@ -8,9 +8,10 @@ pub struct User{
     pub stake_points: u32,
     pub amount_staked: u8,
     
-     pub deposited_usdc: u64,
-    
-     pub deposited_usdc_shares: u64, 
+    pub deposited_usdc: u64,
+    pub deposited_sol: u64,
+
+    pub deposited_usdc_shares: u64, 
     
     pub health_factor: u64,
     

@@ -18,12 +18,7 @@ pub enum LendingProgramError {
     #[msg("The mints have to match.")]
     MintMismatch,
 
-    #[msg("Not a valid Switchboard account")]
-    InvalidSwitchboardAccount,
-    
-    #[msg("Switchboard feed has not been updated in 5 minutes")]
-    StaleFeed,
-    
-    #[msg("Switchboard feed exceeded provided confidence interval")]
-    ConfidenceIntervalExceeded,
+    #[msg("This mint is not supported by the protocol.")]
+    UnsupportedMint,
+
 }

@@ -1,43 +1,49 @@
-use std::ops::Div;
-
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::{ Mint, Token, TokenAccount, transfer,Transfer},
-    associated_token::{AssociatedToken}
-};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{ self, Mint, TokenAccount, TokenInterface, TransferChecked };
+use crate::constants::USDC_ADDRESS;
+use crate::state::PoolConfig;
 use crate::{error::LendingProgramError, state::{User, UserDepositAccount}};
 
 #[derive(Accounts)]
 pub struct WithdrawCollateral<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-
-    #[account(mut)]
-    pub user_account: Account<'info, User>,
-
-    #[account(mut)]
-    pub collateral_mint: Account<'info, Mint>,
-
-    #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
-
+    pub mint: InterfaceAccount<'info, Mint>,
+    
     #[account(
-        init_if_needed,
-        payer = payer,
-        seeds = [user_account.owner.as_ref(), collateral_mint.key().as_ref()],
+        mut, 
+        seeds = [mint.key().as_ref()],
         bump,
-        space = 8 + UserDepositAccount::INIT_SPACE,
+    )]  
+    pub pool: Account<'info, PoolConfig>,
+    
+    #[account(
+        mut, 
+        seeds = [b"treasury", mint.key().as_ref()],
+        bump, 
+    )]  
+    pub pool_token_account: InterfaceAccount<'info, TokenAccount>,
+    
+    #[account(
+        mut, 
+        seeds = [payer.key().as_ref()],
+        bump,
+    )]  
+    pub user_account: Account<'info, User>,
+    
+    #[account( 
+        init_if_needed, 
+        payer = payer,
+        associated_token::mint = mint, 
+        associated_token::authority = payer,
+        associated_token::token_program = token_program,
     )]
-    pub user_deposit: Account<'info, UserDepositAccount>,
-
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    pub price_feed: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub pool_token_account: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
+    pub user_token_account: InterfaceAccount<'info, TokenAccount>, 
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info,System>
+    pub system_program: Program<'info, System>,
+    
 }
 
 impl<'info> WithdrawCollateral<'info> {
@@ -45,40 +51,50 @@ impl<'info> WithdrawCollateral<'info> {
         &mut self, 
         amount: u64,
         ) -> Result<()>{
-            /*let oracle_price;
-            match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
-                Ok(account) => {
-                    let price_feed = account.get_ema_price_unchecked();
-                    let pricer: f64 = price_feed.price as f64;
-                    let base: f64 = 10.0;
-                    let comp: f64 = base.powi(price_feed.expo);
-                    oracle_price = (pricer * comp) as u64;
-                },
-                Err(e) => {
-                    msg!("Deserialization error: {:?}", e);
-                    return Err(ProgramError::InvalidAccountData.into());
-                }
+            let user = &mut self.user_account;
+
+            let deposited_value; 
+
+            // FIXME: Change from if statement to match statement?? Use PDA deserialization to get the mint address??
+            let mint_address = &self.mint.to_account_info().key().to_string();
+            if mint_address == USDC_ADDRESS {
+                deposited_value = user.deposited_usdc;
+            } else {
+                return Err(LendingProgramError::UnsupportedMint.into());
             }
-            let withdrawn_amount_in_usdc = amount * oracle_price;
-    
-            require!(amount <= self.user_token_account.amount,
-                LendingProgramError::NotEnoughFunds);
-            let from = &mut self.pool_token_account;
-            let to = &mut self.user_token_account;
-            let token_program = &mut self.token_program;
-            let _ = transfer(
-                CpiContext::new(
-                    token_program.to_account_info(),
-                    Transfer{
-                        from: from.to_account_info(),
-                        to: to.to_account_info(),
-                        authority: self.payer.to_account_info(),
-                    },
-                ),
-                amount
-            );    
-            self.user_account.allowed_borrow_amount_in_usdc -= withdrawn_amount_in_usdc.div(2);
-            self.user_deposit.amount -= withdrawn_amount_in_usdc;*/
+
+            if amount > deposited_value {
+                return Err(LendingProgramError::NotEnoughFunds.into());
+            }
+
+            let transfer_cpi_accounts = TransferChecked {
+                from: self.pool_token_account.to_account_info(),
+                mint: self.mint.to_account_info(),
+                to: self.user_token_account.to_account_info(),
+                authority: self.payer.to_account_info(),
+            };
+
+            let cpi_program = self.token_program.to_account_info();
+            let cpi_ctx = CpiContext::new(cpi_program, transfer_cpi_accounts);
+            let decimals = self.mint.decimals;
+
+            token_interface::transfer_checked(cpi_ctx, amount, decimals)?;
+
+            let pool = &mut self.pool;
+            let shares_to_remove = (amount as f64 / pool.total_deposits as f64) * pool.total_deposit_shares as f64;
+
+            let user = &mut self.user_account;
+            
+            if mint_address == USDC_ADDRESS  {
+                user.deposited_usdc -= shares_to_remove as u64;
+            } else {
+                user.deposited_sol -= shares_to_remove as u64;
+            }
+
+            pool.total_deposits -= amount;
+            pool.total_deposit_shares -= shares_to_remove as u64;
+
+            
         Ok(())
     }
     

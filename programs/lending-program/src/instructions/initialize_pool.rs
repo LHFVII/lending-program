@@ -37,7 +37,12 @@ pub struct InitializePool<'info>{
 }
 
 impl<'info> InitializePool<'info>{
-    pub fn initialize_pool(&mut self, pool_number: u64) -> Result<()>{
+    pub fn initialize_pool(&mut self, liquidation_threshold: u64, max_ltv: u64) -> Result<()>{
+        let pool = &mut self.pool_config;
+        pool.mint_address = self.mint.key();
+        pool.authority = self.payer.key();
+        pool.liquidation_threshold = liquidation_threshold;
+        pool.max_ltv = max_ltv;
         Ok(())
     }
 }
