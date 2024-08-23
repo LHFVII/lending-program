@@ -24,4 +24,7 @@ pub enum LendingProgramError {
     #[msg("Pool is not undercollateralized.")]
     NotUndercollateralized,
 
+    #[msg("The amount entered is above the healthy level")]
+    OverBorrowableAmount,
+
 }

@@ -104,12 +104,12 @@ describe("Create a system account", async () => {
             1_000_000 * 10 ** 6,
         );
         
-        await puppetProgram.methods.initializePool(new anchor.BN(1))
-            .accounts({payer: puppetProgram.provider.publicKey, mint: USDC})
+        await puppetProgram.methods.initializePool(new anchor.BN(10),new anchor.BN(100000))
+            .accounts({payer: puppetProgram.provider.publicKey, mint: USDC, tokenProgram: TOKEN_PROGRAM_ID})
             .rpc();
         
-        await puppetProgram.methods.initializePool(new anchor.BN(1))
-            .accounts({payer: puppetProgram.provider.publicKey, mint: secondMint})
+        await puppetProgram.methods.initializePool(new anchor.BN(10),new anchor.BN(100000))
+            .accounts({payer: puppetProgram.provider.publicKey, mint: secondMint, tokenProgram: TOKEN_PROGRAM_ID})
             .rpc();
         
         userTokenAddress = await getAssociatedTokenAddressSync(USDC, userOne.publicKey);
@@ -124,11 +124,9 @@ describe("Create a system account", async () => {
             TOKEN_PROGRAM_ID.toBuffer(),
             USDC.toBuffer(),
         ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID);
-        
-        
     });
 
-    it("Initialize pool and deposit collateral", async () => {    
+    it("Deposit collateral", async () => {    
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt(1_000_000 * 10 ** 6));
@@ -139,7 +137,7 @@ describe("Create a system account", async () => {
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceUpdate: solUsdPriceFeedAccount})
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress})
             .signers([userOne])
             .rpc();
         

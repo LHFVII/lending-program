@@ -1,40 +1,47 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::{ Mint, Token, TokenAccount, transfer, Transfer},
-    associated_token::AssociatedToken
-};
-
-use crate::{error::LendingProgramError, state::User};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{ self, Mint, TokenAccount, TokenInterface, TransferChecked };
+use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
+use crate::constants::{MAXIMUM_AGE, SOL_USD_FEED_ID, USDC_ADDRESS, USDC_USD_FEED_ID};
+use crate::{error::LendingProgramError, state::{PoolConfig, User}};
 
 
 
 #[derive(Accounts)]
 pub struct BorrowAsset<'info> {
     #[account(mut)]
-    pub user_account: Account<'info, User>,
-
-    #[account()]
-    pub borrow_mint: Account<'info, Mint>,
-
-    #[account(
-        init_if_needed,
-        payer = payer,
-        associated_token::mint = borrow_mint,
-        associated_token::authority = payer
-    )]
-    pub user_token_account: Account<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub pool_token_account: Account<'info, TokenAccount>,
-
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    pub price_feed: AccountInfo<'info>,
-
-    #[account(mut)]
     pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
+    pub mint: InterfaceAccount<'info, Mint>,
+    #[account(
+        mut, 
+        seeds = [mint.key().as_ref()],
+        bump,
+    )]  
+    pub pool: Account<'info, PoolConfig>,
+    #[account(
+        mut, 
+        seeds = [b"treasury", mint.key().as_ref()],
+        bump, 
+    )]  
+    pub pool_token_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        mut, 
+        seeds = [payer.key().as_ref()],
+        bump,
+    )]  
+    pub user_account: Account<'info, User>,
+    #[account( 
+        init_if_needed, 
+        payer = payer,
+        associated_token::mint = mint, 
+        associated_token::authority = payer,
+        associated_token::token_program = token_program,
+    )]
+    pub user_token_account: InterfaceAccount<'info, TokenAccount>, 
+    pub price_update: Account<'info, PriceUpdateV2>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info,System>
+    pub system_program: Program<'info, System>,
 }
 
 impl<'info> BorrowAsset<'info> {
@@ -42,46 +49,65 @@ impl<'info> BorrowAsset<'info> {
         &mut self,
         amount: u64
         ) -> Result<()>{
-            /*let oracle_price;
-            match SolanaPriceAccount::account_info_to_feed(&self.price_feed) {
-                Ok(account) => {
-                    let price_feed = account.get_ema_price_unchecked();
-                    let pricer: f64 = price_feed.price as f64;
-                    let base: f64 = 10.0;
-                    let comp: f64 = base.powi(price_feed.expo);
-                    oracle_price = (pricer * comp) as u64;
+            let pool = &mut self.pool;
+            let user = &mut self.user_account;
+        
+            let price_update = &mut self.price_update;
+        
+            let sol_feed_id = get_feed_id_from_hex(SOL_USD_FEED_ID)?; 
+            let usdc_feed_id = get_feed_id_from_hex(USDC_USD_FEED_ID)?;
+        
+            let sol_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &sol_feed_id)?;
+            let usdc_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &usdc_feed_id)?;
+        
+            // Note: For simplicity, interest is not being included in these calculations. 
+        
+            let total_collateral = (sol_price.price as u64 * user.deposited_sol) + (usdc_price.price as u64 * user.deposited_usdc);
+            let total_borrowed = (sol_price.price as u64 * user.borrowed_sol) + (usdc_price.price as u64 * user.borrowed_usdc);    
+        
+            let borrowable_amount = (total_collateral as u64 * pool.max_ltv) - total_borrowed;
+            require!(borrowable_amount > amount,
+                LendingProgramError::OverBorrowableAmount
+            );
+        
+            let safe_borrowable_amount = (total_collateral * pool.liquidation_threshold) - total_borrowed;
+        
+            // Warn if borrowing beyond the safe amount but still allow if within the max borrowable amount
+            if safe_borrowable_amount < amount {
+                msg!("Warning: Borrowing above the safe borrowable amount, risk of liquidation may increase.");
+            }
+        
+            let transfer_cpi_accounts = TransferChecked {
+                from: self.pool_token_account.to_account_info(),
+                mint: self.mint.to_account_info(),
+                to: self.user_token_account.to_account_info(),
+                authority: self.payer.to_account_info(),
+            };
+        
+            let cpi_program = self.token_program.to_account_info();
+            let cpi_ctx = CpiContext::new(cpi_program, transfer_cpi_accounts);
+            let decimals = self.mint.decimals;
+        
+            token_interface::transfer_checked(cpi_ctx, amount, decimals)?;
+        
+            let borrow_ratio = amount.checked_div(pool.total_borrowed).unwrap();
+            let users_shares = pool.total_borrowed_shares.checked_mul(borrow_ratio).unwrap();
+        
+            pool.total_borrowed += amount;
+            pool.total_borrowed_shares += users_shares; 
+            let mint_address = &self.mint.to_account_info().key().to_string();
+            match mint_address {
+                key if key == USDC_ADDRESS => {
+                    user.borrowed_usdc += amount;
+                    user.deposited_usdc_shares += users_shares;
                 },
-                Err(e) => {
-                    msg!("Deserialization error: {:?}", e);
-                    return Err(ProgramError::InvalidAccountData.into());
+                _ => {
+                    user.borrowed_sol += amount;
+                    user.deposited_sol_shares += users_shares;
                 }
             }
-            let requested_borrow_amount_in_usdc = amount * oracle_price;
-            
-            
-            require!(requested_borrow_amount_in_usdc <= self.pool_token_account.amount,
-                LendingProgramError::NotEnoughFunds
-            );
-            require!(self.user_account.allowed_borrow_amount_in_usdc < requested_borrow_amount_in_usdc,
-                LendingProgramError::NotEnoughFunds
-            );
-            let from = &mut self.pool_token_account;
-            let to = &mut self.user_token_account;
-            let token_program = &mut self.token_program;
-    
-            let _ = transfer(
-                CpiContext::new(
-                    token_program.to_account_info(),
-                    Transfer{
-                        from: from.to_account_info(),
-                        to: to.to_account_info(),
-                        authority: self.payer.to_account_info(),
-                    },
-                ),
-                amount
-            );
-            self.user_account.borrowed_amount_in_usdc += requested_borrow_amount_in_usdc;*/
-        Ok(())
+        
+            Ok(())
     }
 }
 
