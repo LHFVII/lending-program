@@ -10,8 +10,10 @@ pub struct User{
     
     pub deposited_usdc: u64,
     pub deposited_sol: u64,
-
     pub deposited_usdc_shares: u64, 
+    pub deposited_sol_shares: u64,
+    pub borrowed_usdc: u64,
+    pub borrowed_sol: u64,
     
     pub health_factor: u64,
     

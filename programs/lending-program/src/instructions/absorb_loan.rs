@@ -1,116 +1,115 @@
-use std::ops::Div;
-
 use anchor_lang::prelude::*;
-use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
-use crate::{error::LendingProgramError, state::{User, UserDepositAccount}};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{ self, Mint, TokenAccount, TokenInterface, TransferChecked };
+use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
+use crate::constants::{MAXIMUM_AGE, SOL_USD_FEED_ID, USDC_USD_FEED_ID};
+use crate::state::PoolConfig;
+use crate::{error::LendingProgramError, state::{User}};
 
 #[derive(Accounts)]
 pub struct AbsorbLoan<'info> {
-
     #[account(mut)]
+    pub liquidator: Signer<'info>,
+    pub price_update: Account<'info, PriceUpdateV2>,
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        mut, 
+        seeds = [mint.key().as_ref()],
+        bump,
+    )]  
+    pub pool: Account<'info, PoolConfig>,
+
+    #[account(
+        mut, 
+        seeds = [b"treasury", mint.key().as_ref()],
+        bump, 
+    )]  
+    pub pool_token_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        mut, 
+        seeds = [liquidator.key().as_ref()],
+        bump,
+    )]  
     pub user_account: Account<'info, User>,
-
-    #[account(mut)]
-    pub user_deposit_account: Account<'info, UserDepositAccount>,
-
-    #[account(mut)]
-    pub pool_receiver_token_account: Account<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub pool_sender_token_account: Account<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub liquidator_sender_token_account: Account<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub liquidator_receiver_token_account: Account<'info, TokenAccount>,
-
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    pub feed: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info,System>
+    
+    #[account( 
+        init_if_needed, 
+        payer = liquidator,
+        associated_token::mint = mint, 
+        associated_token::authority = liquidator,
+        associated_token::token_program = token_program,
+    )]
+    pub user_token_account: InterfaceAccount<'info, TokenAccount>, 
+    
+    #[account( 
+        init_if_needed, 
+        payer = liquidator,
+        associated_token::mint = mint, 
+        associated_token::authority = liquidator,
+        associated_token::token_program = token_program,
+    )]
+    pub liquidator_token_account: InterfaceAccount<'info, TokenAccount>, 
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
 }
 
 impl<'info> AbsorbLoan<'info> {
     pub fn absorb_loan(
         &mut self
         ) -> Result<()>{
-            /*let feed_account = self.feed.data.borrow();
-            let feed = PullFeedAccountData::parse(feed_account).unwrap();
-            let borrowed_amount = self.user_account.borrowed_amount_in_usdc;
-            let allowed_borrow_amount_in_usdc: Decimal;
-            let mut token_price_in_usdc;
-            let mut borrowed_amount_decimal: Decimal;
-            match feed.value(){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(feed_value) => {token_price_in_usdc = feed_value;}
-            };
-            match Decimal::from_u64(borrowed_amount){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {borrowed_amount_decimal = converted;}
-            };
-            match Decimal::from_u64(self.user_account.allowed_borrow_amount_in_usdc){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {allowed_borrow_amount_in_usdc = converted;}
-            };
-            let borrowed_amount_in_usdc = borrowed_amount_decimal * token_price_in_usdc;
-            require!(borrowed_amount_in_usdc >= allowed_borrow_amount_in_usdc,
-                LendingProgramError::MarginNotLargeEnough
+            let pool = &mut self.pool;
+            let user = &mut self.user_account;
+
+            let price_update: &mut Account<'info, PriceUpdateV2> = &mut self.price_update;
+
+            let sol_feed_id = get_feed_id_from_hex(SOL_USD_FEED_ID)?; 
+            let usdc_feed_id = get_feed_id_from_hex(USDC_USD_FEED_ID)?;
+
+            let sol_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &sol_feed_id)?;
+            let usdc_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &usdc_feed_id)?;
+
+            let total_collateral = (sol_price.price as u64 * user.deposited_sol) + (usdc_price.price as u64 * user.deposited_usdc);
+            let total_borrowed = (sol_price.price as u64 * user.borrowed_sol) + (usdc_price.price as u64 * user.borrowed_usdc);    
+
+            let health_factor = (total_collateral * pool.max_ltv)/total_borrowed;
+            require!(health_factor < 1,
+                LendingProgramError::NotUndercollateralized
             );
-    
-            let liquidator_sender_token_account = &mut self.liquidator_sender_token_account;
-            let liquidator_receiver_token_account = &mut self.liquidator_receiver_token_account;
-            let pool_sender_token_account = &mut self.pool_sender_token_account;
-            let pool_receiver_token_account = &mut self.pool_receiver_token_account;
+
             
-            let token_program = &mut self.token_program;
-            let loan_amount = self.user_account.borrowed_amount_in_usdc;
-            // Buy the loan
-            let _ = transfer(
-                CpiContext::new(
-                    token_program.to_account_info(),
-                    Transfer{
-                        from: liquidator_sender_token_account.to_account_info(),
-                        to: pool_receiver_token_account.to_account_info(),
-                        authority: self.payer.to_account_info(),
-                    },
-                ),
-                loan_amount
-            );
-    
-            // we also need 10% from the collateral as a gift to the liquidator
-            let liquidation_reward = borrowed_amount.div(20);
-            let mut liquidation_reward_decimal;
-            match Decimal::from_u64(liquidation_reward){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {liquidation_reward_decimal = converted;}
+
+            let liquidation_amount = total_borrowed * pool.liquidation_close_factor;
+            let liquidation_bonus = liquidation_amount * pool.liquidation_bonus;
+
+            // FIXME: Update authority's for token accounts?? Smart contract should be able to make the transfer 
+
+            // Transfer liquidation amount to bank
+            let transfer_to_bank = TransferChecked {
+                from: self.user_token_account.to_account_info(),
+                mint: self.mint.to_account_info(),
+                to: self.pool_token_account.to_account_info(),
+                authority: self.liquidator.to_account_info(),
             };
-            let loan_token_amount_decimal = (borrowed_amount_in_usdc + liquidation_reward_decimal).div(token_price_in_usdc);
-            let mut loan_token_amount: u64;
-    
-            match Decimal::to_u64(&loan_token_amount_decimal){
-                None => return Err(LendingProgramError::InvalidSwitchboardAccount.into()),
-                Some(converted) => {loan_token_amount = converted;}
+
+            let cpi_program = self.token_program.to_account_info();
+            let cpi_ctx_to_bank = CpiContext::new(cpi_program.clone(), transfer_to_bank);
+            let decimals = self.mint.decimals;
+
+            token_interface::transfer_checked(cpi_ctx_to_bank, liquidation_amount, decimals)?;
+
+            // Transfer liquidation bonus to liquidator
+
+            let transfer_to_liquidator = TransferChecked {
+                from: self.user_token_account.to_account_info(),
+                mint: self.mint.to_account_info(),
+                to: self.liquidator_token_account.to_account_info(),
+                authority: self.liquidator.to_account_info(),
             };
-            // We give the collateral (i.e SOL)
-            let _ = transfer(
-                CpiContext::new(
-                    token_program.to_account_info(),
-                    Transfer{
-                        from: pool_sender_token_account.to_account_info(),
-                        to: liquidator_receiver_token_account.to_account_info(),
-                        authority: self.payer.to_account_info(),
-                    },
-                ),
-                loan_token_amount
-            );
-            self.user_deposit_account.amount -= loan_token_amount;
-            let new_deposit = self.user_deposit_account.amount;
-            self.user_account.allowed_borrow_amount_in_usdc  = new_deposit.div(2);*/
-            
+            let cpi_ctx_to_liquidator = CpiContext::new(cpi_program.clone(), transfer_to_liquidator);
+            token_interface::transfer_checked(cpi_ctx_to_liquidator, liquidation_bonus, decimals)?;
+                        
         Ok(())
     }
     

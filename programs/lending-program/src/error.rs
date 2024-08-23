@@ -21,4 +21,7 @@ pub enum LendingProgramError {
     #[msg("This mint is not supported by the protocol.")]
     UnsupportedMint,
 
+    #[msg("Pool is not undercollateralized.")]
+    NotUndercollateralized,
+
 }
