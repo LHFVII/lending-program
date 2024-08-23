@@ -180,9 +180,6 @@ describe("Create a system account", async () => {
 
     it("Borrow asset", async () => {
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
-        const [userConfigAddress] = await PublicKey.findProgramAddressSync([
-            SOL.toBuffer(),
-        ],puppetProgram.programId);
         const [poolSolConfigAddress] = await PublicKey.findProgramAddressSync([
             SOL.toBuffer(),
         ],puppetProgram.programId);
