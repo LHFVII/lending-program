@@ -1,12 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::{ Mint, Token, TokenAccount, transfer,Transfer},
-    associated_token::{AssociatedToken}
-};
-use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
-use crate::constants::{MAXIMUM_AGE, SOL_USD_FEED_ID, USDC_USD_FEED_ID};
+use anchor_spl::token_interface::{ self, Mint, TokenAccount, TokenInterface, TransferChecked };
+use anchor_spl::associated_token::AssociatedToken;
 
-use crate::state::{UserAccount, UserDepositAccount};
+use crate::state::{PoolConfig, User, UserDepositAccount};
+use crate::constants::{USDC_ADDRESS};
 
 use crate::error::{LendingProgramError};
 
@@ -16,16 +13,33 @@ pub struct DepositCollateral<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account()]
-    pub deposit_mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut)]
-    pub user_account: Account<'info, UserAccount>,
+    #[account(
+        mut, 
+        seeds = [payer.key().as_ref()],
+        bump,
+    )]  
+    pub user_account: Account<'info, User>,
+
+    #[account(
+        mut, 
+        seeds = [mint.key().as_ref()],
+        bump,
+    )]  
+    pub pool_config: Account<'info, PoolConfig>,
+
+    #[account(
+        mut, 
+        seeds = [b"treasury", mint.key().as_ref()],
+        bump, 
+    )]  
+    pub pool_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
         payer = payer,
-        seeds = [user_account.owner.as_ref(), deposit_mint.key().as_ref()],
+        seeds = [user_account.owner.as_ref(), mint.key().as_ref()],
         bump,
         space = 8 + UserDepositAccount::INIT_SPACE,
     )]
@@ -34,17 +48,13 @@ pub struct DepositCollateral<'info> {
     #[account(
         init_if_needed,
         payer = payer,
-        associated_token::mint = deposit_mint,
+        associated_token::mint = mint,
         associated_token::authority = payer,
     )]
-    pub user_token_account: Account<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub pool_token_account: Account<'info, TokenAccount>,
-    pub price_update: Account<'info, PriceUpdateV2>,
-    pub token_program: Program<'info, Token>,
+    pub user_token_account: InterfaceAccount<'info, TokenAccount>, 
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info,System>
+    pub system_program: Program<'info, System>,
 }
 
 
@@ -53,28 +63,42 @@ impl<'info> DepositCollateral<'info>{
         &mut self,
         amount: u64,
         ) -> Result<()>{
-            let price_update = &self.price_update;
+            let transfer_cpi_accounts = TransferChecked {
+                from: self.user_token_account.to_account_info(),
+                mint: self.mint.to_account_info(),
+                to: self.pool_token_account.to_account_info(),
+                authority: self.payer.to_account_info(),
+            };
+        
+            let cpi_program = self.token_program.to_account_info();
+            let cpi_ctx = CpiContext::new(cpi_program, transfer_cpi_accounts);
+            let decimals = self.mint.decimals;
+            token_interface::transfer_checked(cpi_ctx, amount, decimals)?;
 
-            let sol_feed_id = get_feed_id_from_hex(SOL_USD_FEED_ID)?; 
-            let usdc_feed_id = get_feed_id_from_hex(USDC_USD_FEED_ID)?;
+            let pool = &mut self.pool_config;
 
-            let sol_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &sol_feed_id)?;
-            let usdc_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &usdc_feed_id)?;
+            if pool.total_deposits == 0 {
+                pool.total_deposits = amount;
+                pool.total_deposit_shares = amount;
+            }
             
-            let from = &mut self.user_token_account;
-            let to = &mut self.pool_token_account;
-            let token_program = &mut self.token_program;
-            let _ = transfer(
-                CpiContext::new(
-                    token_program.to_account_info(),
-                    Transfer{
-                        from: from.to_account_info(),
-                        to: to.to_account_info(),
-                        authority: self.payer.to_account_info(),
-                    },
-                ),
-                amount
-            );
+            let deposit_ratio = amount.checked_div(pool.total_deposits).unwrap();
+            let users_shares = pool.total_deposit_shares.checked_mul(deposit_ratio).unwrap();
+            
+            let user = &mut self.user_account;
+            let key_string =  self.mint.to_account_info().key().to_string().clone();
+            match key_string {
+                key if key == USDC_ADDRESS => {
+                    user.deposited_usdc += amount;
+                    user.deposited_usdc_shares += users_shares;
+                },
+                _ => {
+                    msg!("")
+                }
+            }
+            pool.total_deposits += amount;
+            pool.total_deposit_shares += users_shares;
+            
             
         Ok(())
     }

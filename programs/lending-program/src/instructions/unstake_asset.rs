@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{metadata::{mpl_token_metadata::instructions::{ThawDelegatedAccountCpi, ThawDelegatedAccountCpiAccounts}, MasterEditionAccount, Metadata, MetadataAccount}, token::{revoke, Mint, Revoke, Token, TokenAccount}};
 
-use crate::state::{StakeAccount, StakeConfig, UserAccount};
+use crate::state::{StakeAccount, StakeConfig, User};
 
 #[derive(Accounts)]
 pub struct Unstake<'info> {
@@ -48,7 +48,7 @@ pub struct Unstake<'info> {
         seeds = [b"user".as_ref(), user.key().as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_account: Account<'info, User>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub metadata_program: Program<'info, Metadata>,

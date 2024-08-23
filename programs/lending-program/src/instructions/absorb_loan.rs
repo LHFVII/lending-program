@@ -2,13 +2,13 @@ use std::ops::Div;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
-use crate::{error::LendingProgramError, state::{UserAccount, UserDepositAccount}};
+use crate::{error::LendingProgramError, state::{User, UserDepositAccount}};
 
 #[derive(Accounts)]
 pub struct AbsorbLoan<'info> {
 
     #[account(mut)]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_account: Account<'info, User>,
 
     #[account(mut)]
     pub user_deposit_account: Account<'info, UserDepositAccount>,

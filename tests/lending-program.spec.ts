@@ -42,8 +42,21 @@ describe("Create a system account", async () => {
     before(async () => {
         const programId = new PublicKey('77B3AdNp6RRzsVMQSWAUVv28RXmA8YJVAfWkimRTwXi6')
         userOne = Keypair.generate();
-        context = await startAnchor("",[{name:"lending_program", programId: programId},{name:"pyth", programId: new PublicKey('2Fts5wLxxbQB8wSmDwF8wJJ3GgDg7X9P4qMZvEe5gNSH')}],[])
+        context = await startAnchor("",[{name:"lending_program", programId: programId}],[])
         provider = new BankrunProvider(context);
+        bankrunContextWrapper = new BankrunContextWrapper(context);
+        connection = bankrunContextWrapper.connection.toConnection();
+        pythSolanaReceiver = new PythSolanaReceiver({
+            connection,
+            wallet: provider.wallet,
+        });
+      
+        const SOL_PRICE_FEED_ID =
+        '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d';
+        pythSolanaReceiver
+        solUsdPriceFeedAccount = pythSolanaReceiver
+        .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
+        .toBase58();
         puppetProgram = new Program<LendingProgram>(IDL, provider);
         banksClient = context.banksClient;
         mintAuthority = anchor.web3.Keypair.generate();
@@ -91,7 +104,6 @@ describe("Create a system account", async () => {
             1_000_000 * 10 ** 6,
         );
         
-
         await puppetProgram.methods.initializePool(new anchor.BN(1))
             .accounts({payer: puppetProgram.provider.publicKey, mint: USDC})
             .rpc();
@@ -113,30 +125,10 @@ describe("Create a system account", async () => {
             USDC.toBuffer(),
         ],SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID);
         
-        bankrunContextWrapper = new BankrunContextWrapper(context);
-
-        const connection = bankrunContextWrapper.connection.toConnection();
-
-        const pythSolanaReceiver = new PythSolanaReceiver({
-        connection,
-        wallet: provider.wallet,
-        });
-      
-        const SOL_PRICE_FEED_ID =
-        '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d';
-      
-        solUsdPriceFeedAccount = pythSolanaReceiver
-        .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
-        .toBase58();
-    
-        console.log(solUsdPriceFeedAccount);
+        
     });
 
-    it("Initialize pool and deposit collateral", async () => {
-        // Check if the user has the correct amount of USDC
-        const bankrunContextWrapper = new BankrunContextWrapper(context);
-        const priceFeedAddress = await mockOracleNoProgram(bankrunContextWrapper,150);
-            
+    it("Initialize pool and deposit collateral", async () => {    
         let userTokenAccount = await banksClient.getAccount(userTokenAddress);
         let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedAccount.amount).to.equal(BigInt(1_000_000 * 10 ** 6));
@@ -147,7 +139,7 @@ describe("Create a system account", async () => {
 
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceFeed: solUsdPriceFeedAccount})
+            .accounts({payer: userOne.publicKey, depositMint: USDC, userAccount: userAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, priceUpdate: solUsdPriceFeedAccount})
             .signers([userOne])
             .rpc();
         

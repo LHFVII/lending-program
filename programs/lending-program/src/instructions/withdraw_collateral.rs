@@ -5,7 +5,7 @@ use anchor_spl::{
     token::{ Mint, Token, TokenAccount, transfer,Transfer},
     associated_token::{AssociatedToken}
 };
-use crate::{error::LendingProgramError, state::{UserAccount, UserDepositAccount}};
+use crate::{error::LendingProgramError, state::{User, UserDepositAccount}};
 
 #[derive(Accounts)]
 pub struct WithdrawCollateral<'info> {
@@ -13,7 +13,7 @@ pub struct WithdrawCollateral<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut)]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_account: Account<'info, User>,
 
     #[account(mut)]
     pub collateral_mint: Account<'info, Mint>,

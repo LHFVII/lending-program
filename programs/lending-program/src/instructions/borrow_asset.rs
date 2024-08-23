@@ -4,14 +4,14 @@ use anchor_spl::{
     associated_token::AssociatedToken
 };
 
-use crate::{error::LendingProgramError, state::UserAccount};
+use crate::{error::LendingProgramError, state::User};
 
 
 
 #[derive(Accounts)]
 pub struct BorrowAsset<'info> {
     #[account(mut)]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_account: Account<'info, User>,
 
     #[account()]
     pub borrow_mint: Account<'info, Mint>,
