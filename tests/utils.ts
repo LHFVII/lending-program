@@ -5,13 +5,11 @@ import * as token from "@solana/spl-token";
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import { assert } from 'chai';
 import buffer from 'buffer';
-
-
 import {
   BankrunConnection,
   BankrunContextWrapper,
 } from './bankrunConnection';
-import pythIDL from '../target/idl/pyth.json';
+
 
 const empty32Buffer = buffer.Buffer.alloc(32);
 
@@ -124,43 +122,7 @@ export async function createMint(
     return associatedToken;
   }
 
-  export async function mockOracleNoProgram(
-    context: BankrunContextWrapper,
-    price: number = 5 * 10e7,
-	  expo = -7,
-    confidence?: number
-  ): Promise<PublicKey> {
-    const provider = new AnchorProvider(
-      context.connection.toConnection(),
-      context.provider.wallet,
-      {
-        commitment: 'processed',
-      }
-    );
   
-    const program = new Program(
-      pythIDL as anchor.Idl,
-      provider
-    );
-
-    const priceFeedAddress = await createPriceFeedBankrun({
-      oracleProgram: program,
-      context: context,
-      initPrice: price,
-      expo: expo,
-      confidence,
-    });
-  
-    const feedData = await getFeedDataNoProgram(
-      context.connection,
-      priceFeedAddress
-    );
-    if (Math.abs(feedData.price - price) > 1e-10) {
-      console.log('mockOracle precision error:', feedData.price, '!=', price);
-    }
-    //assert.ok(Math.abs(feedData.price - price) < 1e-10);
-    return priceFeedAddress;
-  }
   
   export const createPriceFeedBankrun = async ({
     oracleProgram,

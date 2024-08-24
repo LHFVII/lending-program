@@ -21,8 +21,8 @@ pub mod lending_program {
         ctx.accounts.initialize_user()
     }
 
-    pub fn initialize_pool(ctx: Context<InitializePool>, pool_number: u64) -> Result<()> {
-        ctx.accounts.initialize_pool(pool_number)
+    pub fn initialize_pool(ctx: Context<InitializePool>, liquidation_threshold: u64, max_ltv: u64) -> Result<()> {
+        ctx.accounts.initialize_pool(liquidation_threshold, max_ltv)
     }
 
     pub fn deposit_collateral(ctx: Context<DepositCollateral>, amount: u64) -> Result<()> {

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::UserAccount;
+use crate::state::User;
 
 #[derive(Accounts)]
 pub struct InitializeUser<'info> {
@@ -12,17 +12,17 @@ pub struct InitializeUser<'info> {
         payer = payer,
         seeds = [payer.key().as_ref()],
         bump,
-        space = 8 + UserAccount::INIT_SPACE + 16,
+        space = 8 + User::INIT_SPACE + 16,
     )]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_account: Account<'info, User>,
     pub system_program: Program<'info, System>
 }
 
 impl<'info> InitializeUser<'info>{
     pub fn initialize_user(&mut self) -> Result<()>{
         self.user_account.owner = self.payer.key();
-        self.user_account.allowed_borrow_amount_in_usdc = 0;
-        self.user_account.borrowed_amount_in_usdc = 0;
+        let now = Clock::get()?.unix_timestamp; 
+        self.user_account.last_updated = now;
         Ok(())
     }
 }
