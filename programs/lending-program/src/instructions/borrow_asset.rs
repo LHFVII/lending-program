@@ -5,8 +5,6 @@ use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2
 use crate::constants::{MAXIMUM_AGE, SOL_USD_FEED_ID, USDC_ADDRESS, USDC_USD_FEED_ID};
 use crate::{error::LendingProgramError, state::{PoolConfig, User}};
 
-
-
 #[derive(Accounts)]
 pub struct BorrowAsset<'info> {
     #[account(mut)]
@@ -49,7 +47,6 @@ impl<'info> BorrowAsset<'info> {
         &mut self,
         amount: u64
         ) -> Result<()>{
-            msg!("Borrowing...");
             let pool = &mut self.pool;
             let user = &mut self.user_account;
         
@@ -60,9 +57,7 @@ impl<'info> BorrowAsset<'info> {
         
             let sol_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &sol_feed_id)?;
             let usdc_price = price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &usdc_feed_id)?;
-        
-            msg!("Price is: {:?}",sol_price);
-        
+            
             let total_collateral = (sol_price.price as u64 * user.deposited_sol) + (usdc_price.price as u64 * user.deposited_usdc);
             let total_borrowed = (sol_price.price as u64 * user.borrowed_sol) + (usdc_price.price as u64 * user.borrowed_usdc);    
         
@@ -73,7 +68,6 @@ impl<'info> BorrowAsset<'info> {
         
             let safe_borrowable_amount = (total_collateral * pool.liquidation_threshold) - total_borrowed;
         
-            // Warn if borrowing beyond the safe amount but still allow if within the max borrowable amount
             if safe_borrowable_amount < amount {
                 msg!("Warning: Borrowing above the safe borrowable amount, risk of liquidation may increase.");
             }
@@ -107,7 +101,6 @@ impl<'info> BorrowAsset<'info> {
                     user.deposited_sol_shares += users_shares;
                 }
             }
-        
             Ok(())
     }
 }

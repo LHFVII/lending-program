@@ -1,15 +1,15 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{ Mint, TokenAccount, TokenInterface };
 
-use crate::state::PoolConfig;
+use crate::{constants::USDC_ADDRESS, state::{PoolConfig}};
 
 #[derive(Accounts)]
-#[instruction(pool_number: u64)]
 pub struct InitializePool<'info>{
     #[account(mut)]
     pub payer: Signer<'info>,
     
     pub mint: InterfaceAccount<'info, Mint>,
+    
     #[account(
         init, 
         space = 8 + PoolConfig::INIT_SPACE, 
@@ -18,7 +18,7 @@ pub struct InitializePool<'info>{
         bump, 
     )]
     pub pool_config: Account<'info, PoolConfig>,
-    
+
     #[account(
         init, 
         token::mint = mint, 
@@ -39,7 +39,7 @@ impl<'info> InitializePool<'info>{
         pool.authority = self.payer.key();
         pool.liquidation_threshold = liquidation_threshold;
         pool.max_ltv = max_ltv;
-        let now = Clock::get()?.unix_timestamp; 
+        let now = Clock::get()?.unix_timestamp;
         pool.last_updated = now;
         Ok(())
     }

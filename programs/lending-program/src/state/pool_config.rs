@@ -17,3 +17,10 @@ pub struct PoolConfig{
     
     pub last_updated: i64,
 }
+
+#[account]
+#[derive(InitSpace)]
+pub struct PoolKeyConfig{
+    pub usdc_address: Pubkey,
+    pub last_updated: i64,
+}

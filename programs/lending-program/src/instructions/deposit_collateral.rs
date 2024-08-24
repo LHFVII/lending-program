@@ -2,9 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{ self, Mint, TokenAccount, TokenInterface, TransferChecked };
 use anchor_spl::associated_token::AssociatedToken;
 
-use crate::state::{PoolConfig, User, UserDepositAccount};
-use crate::constants::{USDC_ADDRESS};
-
+use crate::state::{PoolConfig, PoolKeyConfig, User, UserDepositAccount};
 use crate::error::{LendingProgramError};
 
 #[derive(Accounts)]
@@ -86,14 +84,14 @@ impl<'info> DepositCollateral<'info>{
             let users_shares = pool.total_deposit_shares.checked_mul(deposit_ratio).unwrap();
             
             let user = &mut self.user_account;
-            let key_string =  self.mint.to_account_info().key().to_string().clone();
-            match key_string {
-                key if key == USDC_ADDRESS => {
+            let mint_address = self.mint.to_account_info().key();
+            match mint_address {
+                key if key == pool.mint_address => {
                     user.deposited_usdc += amount;
                     user.deposited_usdc_shares += users_shares;
                 },
                 _ => {
-                    msg!("")
+                    return Err(LendingProgramError::UnsupportedMint.into());
                 }
             }
             pool.total_deposits += amount;
