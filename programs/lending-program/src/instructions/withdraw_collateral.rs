@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{ self, Mint, TokenAccount, TokenInterface, TransferChecked };
-use crate::state::{PoolConfig};
-use crate::{error::LendingProgramError, state::{User}};
+use crate::state::PoolConfig;
+use crate::{error::LendingProgramError, state::User};
 
 #[derive(Accounts)]
 pub struct WithdrawCollateral<'info> {
