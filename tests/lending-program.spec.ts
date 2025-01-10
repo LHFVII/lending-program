@@ -32,12 +32,24 @@ describe("Create a system account", () => {
     let connection
 
     before(async () => {
-        const pyth = new PublicKey("7UVimffxr9wo1uXYxsr4LHAc58mLzhmwaeKvJ1pjLiE")
-        const devConnection = new Connection("https://api.devnet.solana.com")
-        const accountInfo = await devConnection.getAccountInfo(pyth)
-        context = await startAnchor('', [{ name: "lending_program", programId: new PublicKey(IDL.address) }], []);
+        const pyth = new PublicKey('7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE');
+
+        const devnetConnection = new Connection('https://api.devnet.solana.com');
+        const accountInfo = await devnetConnection.getAccountInfo(pyth);
+
+
+        context = await startAnchor('', [{ name: "lending_program", programId: new PublicKey(IDL.address) }], [{
+            address: pyth,
+            info: accountInfo,
+        }]);
+
         userOne = Keypair.generate();
         provider = new BankrunProvider(context);
+
+        const SOL_PRICE_FEED_ID = '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a'
+        const pythSolanaReceiver = new PythSolanaReceiver({ connection: devnetConnection, wallet: provider.wallet })
+        const SOL_USD_PRICE_ACCOUNT = pythSolanaReceiver.getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
+
         bankrunContextWrapper = new BankrunContextWrapper(context);
         connection = bankrunContextWrapper.connection.toConnection();
 
