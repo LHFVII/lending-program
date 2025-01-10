@@ -1,4 +1,4 @@
-import { startAnchor} from 'solana-bankrun';
+import { startAnchor } from 'solana-bankrun';
 import { BankrunProvider } from 'anchor-bankrun';
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { Program } from "@coral-xyz/anchor";
@@ -8,12 +8,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, unpackAccount } from '@solana/spl-token';
 import { createAssociatedTokenAccount, createMint, mintTo } from './utils';
 import { BankrunContextWrapper } from './bankrunConnection';
- 
+import { PythSolanaReceiver } from '@pythnetwork/pyth-solana-receiver';
+import { Connection } from '@solana/web3.js';
+
 const IDL = require("../target/idl/lending_program.json");
 
 const transferAmount = 1_000_000_000;
 
-describe("Create a system account", async () => {
+describe("Create a system account", () => {
     let context;
     let userOne;
     let puppetProgram;
@@ -24,30 +26,31 @@ describe("Create a system account", async () => {
     let SOL: PublicKey;
     let userUsdcAccount;
     let userTokenAddress;
-    
+
     let poolUsdcAssociatedTokenAddress;
     let bankrunContextWrapper: BankrunContextWrapper;
     let connection
-    
-
 
     before(async () => {
-        context = await startAnchor('',[{name:"lending_program", programId: new PublicKey(IDL.address)}],[])
+        const pyth = new PublicKey("7UVimffxr9wo1uXYxsr4LHAc58mLzhmwaeKvJ1pjLiE")
+        const devConnection = new Connection("https://api.devnet.solana.com")
+        const accountInfo = await devConnection.getAccountInfo(pyth)
+        context = await startAnchor('', [{ name: "lending_program", programId: new PublicKey(IDL.address) }], []);
         userOne = Keypair.generate();
         provider = new BankrunProvider(context);
         bankrunContextWrapper = new BankrunContextWrapper(context);
         connection = bankrunContextWrapper.connection.toConnection();
-    
+
         puppetProgram = new Program<LendingProgram>(IDL, provider);
-        
+
         banksClient = context.banksClient;
-        
+
         payer = provider.wallet.payer;
         const transferTransaction = new anchor.web3.Transaction().add(
             anchor.web3.SystemProgram.transfer({
-            fromPubkey: puppetProgram.provider.publicKey,
-            toPubkey: userOne.publicKey,
-            lamports: transferAmount,
+                fromPubkey: puppetProgram.provider.publicKey,
+                toPubkey: userOne.publicKey,
+                lamports: transferAmount,
             })
         );
         await provider.sendAndConfirm(transferTransaction, [provider.wallet.payer]);
@@ -57,14 +60,14 @@ describe("Create a system account", async () => {
             payer.publicKey,
             payer.publicKey,
             6
-          );
+        );
         SOL = await createMint(
             banksClient,
             payer,
             payer.publicKey,
             null,
             2
-          );
+        );
         userUsdcAccount = await createAssociatedTokenAccount(
             banksClient,
             userOne,
@@ -73,10 +76,10 @@ describe("Create a system account", async () => {
         );
 
         await puppetProgram.methods.initializeUser()
-            .accounts({payer: userOne.publicKey})
+            .accounts({ payer: userOne.publicKey })
             .signers([userOne])
             .rpc();
-        
+
         await mintTo(
             banksClient,
             userOne,
@@ -85,21 +88,21 @@ describe("Create a system account", async () => {
             payer,
             1_000_000 * 10 ** 6,
         );
-        
-        await puppetProgram.methods.initializePool(new anchor.BN(10),new anchor.BN(100000))
-            .accounts({payer: puppetProgram.provider.publicKey, mint: USDC, tokenProgram: TOKEN_PROGRAM_ID})
+
+        await puppetProgram.methods.initializePool(new anchor.BN(10), new anchor.BN(100000))
+            .accounts({ payer: puppetProgram.provider.publicKey, mint: USDC, tokenProgram: TOKEN_PROGRAM_ID })
             .rpc();
-        
-        await puppetProgram.methods.initializePool(new anchor.BN(10),new anchor.BN(100000))
-            .accounts({payer: puppetProgram.provider.publicKey, mint: SOL, tokenProgram: TOKEN_PROGRAM_ID})
+
+        await puppetProgram.methods.initializePool(new anchor.BN(10), new anchor.BN(100000))
+            .accounts({ payer: puppetProgram.provider.publicKey, mint: SOL, tokenProgram: TOKEN_PROGRAM_ID })
             .rpc();
-        
+
         userTokenAddress = await getAssociatedTokenAddressSync(USDC, userOne.publicKey);
-        
+
         [poolUsdcAssociatedTokenAddress] = await PublicKey.findProgramAddressSync([
             Buffer.from('treasury'),
             USDC.toBuffer(),
-        ],puppetProgram.programId);
+        ], puppetProgram.programId);
     });
 
     it("Deposit collateral", async () => {
@@ -114,16 +117,22 @@ describe("Create a system account", async () => {
         const [userAddress] = PublicKey.findProgramAddressSync([userOne.publicKey.toBuffer()], puppetProgram.programId);
 
         await puppetProgram.methods.depositCollateral(new anchor.BN(100))
-            .accounts({payer: userOne.publicKey, mint: USDC, userAccount: userAddress, userTokenAccount: userTokenAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, tokenProgram: TOKEN_PROGRAM_ID})
+            .accounts({ payer: userOne.publicKey, mint: USDC, userAccount: userAddress, userTokenAccount: userTokenAddress, poolTokenAccount: poolUsdcAssociatedTokenAddress, tokenProgram: TOKEN_PROGRAM_ID })
             .signers([userOne])
             .rpc();
-        
+
         PoolTokenAccount = await banksClient.getAccount(poolUsdcAssociatedTokenAddress);
         unpackedPoolAccount = unpackAccount(poolUsdcAssociatedTokenAddress, PoolTokenAccount, TOKEN_PROGRAM_ID);
         expect(unpackedPoolAccount.amount).to.equal(BigInt(100));
         userTokenAccount = await banksClient.getAccount(userTokenAddress);
         unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
-        expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6)-100));
+        expect(unpackedAccount.amount).to.equal(BigInt((1_000_000 * 10 ** 6) - 100));
+    });
+
+    it("Absorb loan", async () => {
+        let userTokenAccount = await banksClient.getAccount(userTokenAddress);
+        let unpackedAccount = unpackAccount(userTokenAddress, userTokenAccount, TOKEN_PROGRAM_ID);
+
     });
 });
 
